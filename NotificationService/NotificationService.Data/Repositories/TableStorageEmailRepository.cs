@@ -8,6 +8,7 @@ namespace NotificationService.Data.Repositories
     using System.Globalization;
     using System.Linq;
     using System.Threading.Tasks;
+    using Microsoft.Azure.Cosmos;
     using Microsoft.Azure.Cosmos.Table;
     using Microsoft.Extensions.Options;
     using Newtonsoft.Json;
@@ -44,6 +45,26 @@ namespace NotificationService.Data.Repositories
         private readonly CloudTable meetingHistoryTable;
 
         /// <summary>
+        /// Instance of Cosmos DB Configuration.
+        /// </summary>
+        private readonly CosmosDBSetting cosmosDBSetting;
+
+        /// <summary>
+        /// Instance of Application Configuration.
+        /// </summary>
+        private readonly ICosmosDBQueryClient cosmosDBQueryClient;
+
+        /// <summary>
+        /// Instance of <see cref="Container"/>.
+        /// </summary>
+        private readonly Container eventsContainer;
+
+        /// <summary>
+        /// Instance of <see cref="ICosmosLinqQuery"/>.
+        /// </summary>
+        private readonly ICosmosLinqQuery cosmosLinqQuery;
+
+        /// <summary>
         /// Instance of <see cref="ILogger"/>.
         /// </summary>
         private readonly ILogger logger;
@@ -56,12 +77,18 @@ namespace NotificationService.Data.Repositories
         /// <summary>
         /// Initializes a new instance of the <see cref="TableStorageEmailRepository"/> class.
         /// </summary>
+        /// <param name="cosmosDBSetting">Cosmos DB Configuration.</param>
+        /// <param name="cosmosDBQueryClient">CosmosDB Query Client.</param>
+        /// <param name="cosmosLinqQuery">Instance of Cosmos Linq query.</param>
         /// <param name="storageAccountSetting">primary key of storage account.</param>
         /// <param name="cloudStorageClient"> cloud storage client for table storage.</param>
         /// <param name="logger">logger.</param>
         /// <param name="mailAttachmentRepository">Instnce of the Mail Attachment Repository.</param>
-        public TableStorageEmailRepository(IOptions<StorageAccountSetting> storageAccountSetting, ITableStorageClient cloudStorageClient, ILogger logger, IMailAttachmentRepository mailAttachmentRepository)
+        public TableStorageEmailRepository(IOptions<CosmosDBSetting> cosmosDBSetting, ICosmosDBQueryClient cosmosDBQueryClient, ICosmosLinqQuery cosmosLinqQuery, IOptions<StorageAccountSetting> storageAccountSetting, ITableStorageClient cloudStorageClient, ILogger logger, IMailAttachmentRepository mailAttachmentRepository)
         {
+            this.cosmosDBSetting = cosmosDBSetting?.Value ?? throw new System.ArgumentNullException(nameof(cosmosDBSetting));
+            this.cosmosDBQueryClient = cosmosDBQueryClient ?? throw new System.ArgumentNullException(nameof(cosmosDBQueryClient));
+            this.eventsContainer = this.cosmosDBQueryClient.GetCosmosContainer(this.cosmosDBSetting.Database, this.cosmosDBSetting.EventsContainer);
             this.storageAccountSetting = storageAccountSetting?.Value ?? throw new System.ArgumentNullException(nameof(storageAccountSetting));
             this.cloudStorageClient = cloudStorageClient ?? throw new System.ArgumentNullException(nameof(cloudStorageClient));
             var emailHistoryTableName = storageAccountSetting?.Value?.EmailHistoryTableName;
@@ -80,6 +107,7 @@ namespace NotificationService.Data.Repositories
             this.meetingHistoryTable = this.cloudStorageClient.GetCloudTable(meetingHistoryTableName);
             this.logger = logger ?? throw new System.ArgumentNullException(nameof(logger));
             this.mailAttachmentRepository = mailAttachmentRepository;
+            this.cosmosLinqQuery = cosmosLinqQuery;
         }
 
         /// <inheritdoc/>
@@ -239,6 +267,30 @@ namespace NotificationService.Data.Repositories
 
             Task.WaitAll(this.emailHistoryTable.ExecuteBatchAsync(batchOperation));
 
+            try
+            {
+                List<Task> eventsDBUpdateTasks = new List<Task>();
+                foreach (var item in emailNotificationItemEntities)
+                {
+                    var updatedItem = this.eventsContainer.GetItemLinqQueryable<EmailNotificationDto>(allowSynchronousQueryExecution: true)
+                        .Where(nie => item.NotificationId == nie.ExternalId)
+                        .AsEnumerable()
+                        .FirstOrDefault();
+                    updatedItem.Status.Code = (int)item.Status;
+                    updatedItem.Status.Name = item.Status.ToString();
+                    updatedItem.Status.LastModifiedOn = DateTime.Now;
+                    updatedItem.Status.Description = $"This notification {item.Status}";
+                    eventsDBUpdateTasks.Add(this.eventsContainer.UpsertItemAsync(updatedItem));
+                }
+
+                Task.WaitAll(eventsDBUpdateTasks.ToArray());
+            }
+#pragma warning disable CA1031 // Do not catch general exception types
+            catch (Exception)
+#pragma warning restore CA1031 // Do not catch general exception types
+            {
+            }
+
             this.logger.TraceInformation($"Finished {nameof(this.UpdateEmailNotificationItemEntities)} method of {nameof(TableStorageEmailRepository)}.");
 
             return Task.FromResult(true);
@@ -360,6 +412,30 @@ namespace NotificationService.Data.Repositories
             }
 
             Task.WaitAll(this.meetingHistoryTable.ExecuteBatchAsync(batchOperation));
+
+            try
+            {
+                List<Task> eventsDBUpdateTasks = new List<Task>();
+                foreach (var item in meetingNotificationItemEntities)
+                {
+                    var updatedItem = this.eventsContainer.GetItemLinqQueryable<EmailNotificationDto>(allowSynchronousQueryExecution: true)
+                        .Where(nie => item.NotificationId == nie.ExternalId)
+                        .AsEnumerable()
+                        .FirstOrDefault();
+                    updatedItem.Status.Code = (int)item.Status;
+                    updatedItem.Status.Name = item.Status.ToString();
+                    updatedItem.Status.LastModifiedOn = DateTime.Now;
+                    updatedItem.Status.Description = $"This notification {item.Status}";
+                    eventsDBUpdateTasks.Add(this.eventsContainer.UpsertItemAsync(updatedItem));
+                }
+
+                Task.WaitAll(eventsDBUpdateTasks.ToArray());
+            }
+#pragma warning disable CA1031 // Do not catch general exception types
+            catch (Exception)
+#pragma warning restore CA1031 // Do not catch general exception types
+            {
+            }
 
             this.logger.TraceInformation($"Finished {nameof(this.UpdateEmailNotificationItemEntities)} method of {nameof(TableStorageEmailRepository)}.");
 

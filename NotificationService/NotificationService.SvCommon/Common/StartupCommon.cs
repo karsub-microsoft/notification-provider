@@ -155,6 +155,12 @@ namespace NotificationService.SvCommon.Common
                 this.ConfigureCosmosDB(services);
             }
 
+            _ = services.Configure<CosmosDBSetting>(this.Configuration.GetSection(ConfigConstants.EventStoreDBConfigSectionKey));
+            _ = services.Configure<CosmosDBSetting>(s => s.Key = this.Configuration[ConfigConstants.EventStoreDBKeyConfigKey]);
+            _ = services.Configure<CosmosDBSetting>(s => s.Uri = this.Configuration[ConfigConstants.EventStoreDBURIConfigKey]);
+            _ = services.AddScoped<ICosmosLinqQuery, CustomCosmosLinqQuery>();
+            _ = services.AddSingleton<ICosmosDBQueryClient, CosmosDBQueryClient>();
+
             ConfigureStorageAccountServices(services);
 
             _ = services.AddHttpContextAccessor();

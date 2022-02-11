@@ -84,6 +84,21 @@ namespace NotificationService.Common.Configurations
         public const string CosmosDBURIConfigKey = "CosmosDBURI";
 
         /// <summary>
+        /// A constant for CosmosDB config section key from appsetting.json.
+        /// </summary>
+        public const string EventStoreDBConfigSectionKey = "EventStoreDB";
+
+        /// <summary>
+        /// A constant for ConsmosDBKey config key from appsetting.json.
+        /// </summary>
+        public const string EventStoreDBKeyConfigKey = "EventStoreDBKey";
+
+        /// <summary>
+        /// A constant for CosmosDBURI config key from appsetting.json.
+        /// </summary>
+        public const string EventStoreDBURIConfigKey = "EventStoreDBURI";
+
+        /// <summary>
         /// A constant for UserTokenSetting config section key from appsetting.json.
         /// </summary>
         public const string UserTokenSettingConfigSectionKey = "UserTokenSetting";

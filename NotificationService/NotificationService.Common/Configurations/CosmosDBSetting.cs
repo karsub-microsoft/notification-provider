@@ -32,5 +32,10 @@ namespace NotificationService.Common
         /// Gets or sets MeetingHistoryContainer name.
         /// </summary>
         public string MeetingHistoryContainer { get; set; }
+
+        /// <summary>
+        /// Gets or sets EventsContainer name.
+        /// </summary>
+        public string EventsContainer { get; set; }
     }
 }

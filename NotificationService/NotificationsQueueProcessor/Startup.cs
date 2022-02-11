@@ -87,6 +87,12 @@ namespace NotificationsQueueProcessor
                 _ = builder.Services.AddScoped<IEmailNotificationRepository, EmailNotificationRepository>(s => s.GetService<EmailNotificationRepository>());
             }
 
+            _ = builder.Services.Configure<CosmosDBSetting>(configuration.GetSection(ConfigConstants.EventStoreDBConfigSectionKey));
+            _ = builder.Services.Configure<CosmosDBSetting>(s => s.Key = configuration[ConfigConstants.EventStoreDBKeyConfigKey]);
+            _ = builder.Services.Configure<CosmosDBSetting>(s => s.Uri = configuration[ConfigConstants.EventStoreDBURIConfigKey]);
+            _ = builder.Services.AddScoped<ICosmosLinqQuery, CustomCosmosLinqQuery>();
+            _ = builder.Services.AddSingleton<ICosmosDBQueryClient, CosmosDBQueryClient>();
+
             _ = builder.Services.Configure<StorageAccountSetting>(configuration.GetSection(ConfigConstants.StorageAccountConfigSectionKey));
             _ = builder.Services.Configure<StorageAccountSetting>(s => s.ConnectionString = configuration[ConfigConstants.StorageAccountConnectionStringConfigKey]);
             _ = builder.Services.AddScoped<IRepositoryFactory, RepositoryFactory>();

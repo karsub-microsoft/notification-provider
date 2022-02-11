@@ -30,6 +30,16 @@ namespace NotificationService.UnitTests.Data.Repositories
         private readonly Mock<ITableStorageClient> cloudStorageClient;
 
         /// <summary>
+        /// Gets or sets Cosmos DB Query Client Mock.
+        /// </summary>
+        private Mock<ICosmosDBQueryClient> CosmosDBQueryClient { get; set; }
+
+        /// <summary>
+        /// Gets or sets Cosmos Linq Query Mock.
+        /// </summary>
+        private Mock<ICosmosLinqQuery> CosmosLinqQuery { get; set; }
+
+        /// <summary>
         /// Instance of <see cref="ILogger"/>.
         /// </summary>
         private readonly Mock<ILogger> logger;
@@ -64,6 +74,8 @@ namespace NotificationService.UnitTests.Data.Repositories
         public TableStorageRepositoryTests()
         {
             this.cloudStorageClient = new Mock<ITableStorageClient>();
+            this.CosmosDBQueryClient = new Mock<ICosmosDBQueryClient>();
+            this.CosmosLinqQuery = new Mock<ICosmosLinqQuery>();
             this.logger = new Mock<ILogger>();
             this.mailAttachmentRepository = new Mock<IMailAttachmentRepository>();
             this.meetingHistoryTable = new Mock<CloudTable>(new Uri("http://unittests.localhost.com/FakeTable"), (TableClientConfiguration)null);
@@ -84,7 +96,8 @@ namespace NotificationService.UnitTests.Data.Repositories
             _ = this.cloudStorageClient.Setup(x => x.GetCloudTable("MeetingHistory")).Returns(meetingHistoryTable.Object);
             _ = meetingHistoryTable.Setup(x => x.ExecuteQuery(It.IsAny<TableQuery<MeetingNotificationItemTableEntity>>(), It.IsAny<TableRequestOptions>(), It.IsAny<OperationContext>())).Returns(entities);
             IOptions<StorageAccountSetting> options = Options.Create<StorageAccountSetting>(new StorageAccountSetting { BlobContainerName = "Test", ConnectionString = "Test Con", MailTemplateTableName = "MailTemplate", EmailHistoryTableName = "EmailHistory", MeetingHistoryTableName = "MeetingHistory", NotificationQueueName = "test-queue" });
-            var repo = new TableStorageEmailRepository(options, this.cloudStorageClient.Object, this.logger.Object, this.mailAttachmentRepository.Object);
+            IOptions<CosmosDBSetting> eventsDBSettings = Options.Create(new CosmosDBSetting() { Database = "TestDatabase", EventsContainer = "TestEvents", MeetingHistoryContainer = "TestMeetingContainer", Key = "TestKey", Uri = "TestUri" });
+            var repo = new TableStorageEmailRepository(eventsDBSettings, this.CosmosDBQueryClient.Object, this.CosmosLinqQuery.Object, options, this.cloudStorageClient.Object, this.logger.Object, this.mailAttachmentRepository.Object);
             var items = await repo.GetMeetingNotificationItemEntities(new List<string> { "notificationId1", "notificationId2" }, this.applicationName);
             Assert.IsTrue(items.Count == 2);
         }
@@ -103,7 +116,8 @@ namespace NotificationService.UnitTests.Data.Repositories
             _ = this.cloudStorageClient.Setup(x => x.GetCloudTable("MeetingHistory")).Returns(meetingHistoryTable.Object);
             _ = meetingHistoryTable.Setup(x => x.ExecuteQuery(It.IsAny<TableQuery<MeetingNotificationItemTableEntity>>(), It.IsAny<TableRequestOptions>(), It.IsAny<OperationContext>())).Returns(entities);
             IOptions<StorageAccountSetting> options = Options.Create<StorageAccountSetting>(new StorageAccountSetting { BlobContainerName = "Test", ConnectionString = "Test Con", MailTemplateTableName = "MailTemplate", EmailHistoryTableName = "EmailHistory", MeetingHistoryTableName = "MeetingHistory", NotificationQueueName = "test-queue" });
-            var repo = new TableStorageEmailRepository(options, this.cloudStorageClient.Object, this.logger.Object, this.mailAttachmentRepository.Object);
+            IOptions<CosmosDBSetting> eventsDBSettings = Options.Create(new CosmosDBSetting() { Database = "TestDatabase", EventsContainer = "TestEvents", MeetingHistoryContainer = "TestMeetingContainer", Key = "TestKey", Uri = "TestUri" });
+            var repo = new TableStorageEmailRepository(eventsDBSettings, this.CosmosDBQueryClient.Object, this.CosmosLinqQuery.Object, options, this.cloudStorageClient.Object, this.logger.Object, this.mailAttachmentRepository.Object);
             var items = await repo.GetMeetingNotificationItemEntity("notificationId1", this.applicationName);
             Assert.IsTrue(items.NotificationId == "notificationId1");
         }
@@ -119,7 +133,8 @@ namespace NotificationService.UnitTests.Data.Repositories
             _ = this.mailAttachmentRepository.Setup(e => e.UploadMeetingInvite(It.IsAny<IList<MeetingNotificationItemEntity>>(), It.IsAny<string>())).Returns(Task.FromResult(entities));
             this.meetingHistoryTable.Setup(x => x.ExecuteBatchAsync(It.IsAny<TableBatchOperation>(), null, null)).Verifiable();
             IOptions<StorageAccountSetting> options = Options.Create<StorageAccountSetting>(new StorageAccountSetting { BlobContainerName = "Test", ConnectionString = "Test Con", MailTemplateTableName = "MailTemplate", EmailHistoryTableName = "EmailHistory", MeetingHistoryTableName = "MeetingHistory", NotificationQueueName = "test-queue" });
-            var repo = new TableStorageEmailRepository(options, this.cloudStorageClient.Object, this.logger.Object, this.mailAttachmentRepository.Object);
+            IOptions<CosmosDBSetting> eventsDBSettings = Options.Create(new CosmosDBSetting() { Database = "TestDatabase", EventsContainer = "TestEvents", MeetingHistoryContainer = "TestMeetingContainer", Key = "TestKey", Uri = "TestUri" });
+            var repo = new TableStorageEmailRepository(eventsDBSettings, this.CosmosDBQueryClient.Object, this.CosmosLinqQuery.Object, options, this.cloudStorageClient.Object, this.logger.Object, this.mailAttachmentRepository.Object);
             await repo.CreateMeetingNotificationItemEntities(entities, this.applicationName);
             this.meetingHistoryTable.Verify(x => x.ExecuteBatchAsync(It.Is<TableBatchOperation>(x => x.Any(y => y.OperationType == TableOperationType.Insert))), Times.Once);
         }
@@ -136,7 +151,8 @@ namespace NotificationService.UnitTests.Data.Repositories
             List<MeetingNotificationItemEntity> entities = new List<MeetingNotificationItemEntity> { new MeetingNotificationItemEntity { NotificationId = "notificationId1", Application = "Application", RowKey = "notificationId1", ETag = "*" }, new MeetingNotificationItemEntity { NotificationId = "notificationId2", Application = "Application", RowKey = "notificationId2", ETag = "*" } };
             this.meetingHistoryTable.Setup(x => x.ExecuteBatchAsync(It.IsAny<TableBatchOperation>(), null, null)).Verifiable();
             IOptions<StorageAccountSetting> options = Options.Create<StorageAccountSetting>(new StorageAccountSetting { BlobContainerName = "Test", ConnectionString = "Test Con", MailTemplateTableName = "MailTemplate", EmailHistoryTableName = "EmailHistory", MeetingHistoryTableName = "MeetingHistory", NotificationQueueName = "test-queue" });
-            var repo = new TableStorageEmailRepository(options, this.cloudStorageClient.Object, this.logger.Object, this.mailAttachmentRepository.Object);
+            IOptions<CosmosDBSetting> eventsDBSettings = Options.Create(new CosmosDBSetting() { Database = "TestDatabase", EventsContainer = "TestEvents", MeetingHistoryContainer = "TestMeetingContainer", Key = "TestKey", Uri = "TestUri" });
+            var repo = new TableStorageEmailRepository(eventsDBSettings, this.CosmosDBQueryClient.Object, this.CosmosLinqQuery.Object, options, this.cloudStorageClient.Object, this.logger.Object, this.mailAttachmentRepository.Object);
             await repo.UpdateMeetingNotificationItemEntities(entities);
             this.meetingHistoryTable.Verify(x => x.ExecuteBatchAsync(It.Is<TableBatchOperation>(x => x.Any(y => y.OperationType == TableOperationType.Merge))), Times.Once);
         }
@@ -159,7 +175,8 @@ namespace NotificationService.UnitTests.Data.Repositories
             _ = this.cloudStorageClient.Setup(x => x.GetCloudTable("EmailHistory")).Returns(emailHistoryTable.Object);
             _ = emailHistoryTable.Setup(x => x.ExecuteQuery(It.IsAny<TableQuery<EmailNotificationItemTableEntity>>(), It.IsAny<TableRequestOptions>(), It.IsAny<OperationContext>())).Returns(notificationList);
             IOptions<StorageAccountSetting> options = Options.Create<StorageAccountSetting>(new StorageAccountSetting { BlobContainerName = "Test", ConnectionString = "Test Con", MailTemplateTableName = "MailTemplate", EmailHistoryTableName = "EmailHistory", MeetingHistoryTableName = "MeetingHistory", NotificationQueueName = "test-queue" });
-            var classUnderTest = new TableStorageEmailRepository(options, this.cloudStorageClient.Object, this.logger.Object, this.mailAttachmentRepository.Object);
+            IOptions<CosmosDBSetting> eventsDBSettings = Options.Create(new CosmosDBSetting() { Database = "TestDatabase", EventsContainer = "TestEvents", MeetingHistoryContainer = "TestMeetingContainer", Key = "TestKey", Uri = "TestUri" });
+            var classUnderTest = new TableStorageEmailRepository(eventsDBSettings, this.CosmosDBQueryClient.Object, this.CosmosLinqQuery.Object, options, this.cloudStorageClient.Object, this.logger.Object, this.mailAttachmentRepository.Object);
 
             // dateRange is Null.
             _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await classUnderTest.GetPendingOrFailedEmailNotificationsByDateRange(null, this.applicationName, statusList));
@@ -177,7 +194,7 @@ namespace NotificationService.UnitTests.Data.Repositories
             // Fetched records are null
             notificationList = null;
             _ = emailHistoryTable.Setup(x => x.ExecuteQuery(It.IsAny<TableQuery<EmailNotificationItemTableEntity>>(), It.IsAny<TableRequestOptions>(), It.IsAny<OperationContext>())).Returns(notificationList);
-            classUnderTest = new TableStorageEmailRepository(options, this.cloudStorageClient.Object, this.logger.Object, this.mailAttachmentRepository.Object);
+            classUnderTest = new TableStorageEmailRepository(eventsDBSettings, this.CosmosDBQueryClient.Object, this.CosmosLinqQuery.Object, options, this.cloudStorageClient.Object, this.logger.Object, this.mailAttachmentRepository.Object);
             result = await classUnderTest.GetPendingOrFailedEmailNotificationsByDateRange(this.dateRange, this.applicationName, null);
             Assert.IsNull(result);
         }
@@ -200,7 +217,8 @@ namespace NotificationService.UnitTests.Data.Repositories
             _ = this.cloudStorageClient.Setup(x => x.GetCloudTable("MeetingHistory")).Returns(meetingHistoryTable.Object);
             _ = meetingHistoryTable.Setup(x => x.ExecuteQuery(It.IsAny<TableQuery<MeetingNotificationItemTableEntity>>(), It.IsAny<TableRequestOptions>(), It.IsAny<OperationContext>())).Returns(notificationList);
             IOptions<StorageAccountSetting> options = Options.Create<StorageAccountSetting>(new StorageAccountSetting { BlobContainerName = "Test", ConnectionString = "Test Con", MailTemplateTableName = "MailTemplate", EmailHistoryTableName = "EmailHistory", MeetingHistoryTableName = "MeetingHistory", NotificationQueueName = "test-queue" });
-            var classUnderTest = new TableStorageEmailRepository(options, this.cloudStorageClient.Object, this.logger.Object, this.mailAttachmentRepository.Object);
+            IOptions<CosmosDBSetting> eventsDBSettings = Options.Create(new CosmosDBSetting() { Database = "TestDatabase", EventsContainer = "TestEvents", MeetingHistoryContainer = "TestMeetingContainer", Key = "TestKey", Uri = "TestUri" });
+            var classUnderTest = new TableStorageEmailRepository(eventsDBSettings, this.CosmosDBQueryClient.Object, this.CosmosLinqQuery.Object, options, this.cloudStorageClient.Object, this.logger.Object, this.mailAttachmentRepository.Object);
 
             // dateRange is Null.
             _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await classUnderTest.GetPendingOrFailedMeetingNotificationsByDateRange(null, this.applicationName, statusList));
@@ -218,7 +236,7 @@ namespace NotificationService.UnitTests.Data.Repositories
             // Fetched records are null
             notificationList = null;
             _ = meetingHistoryTable.Setup(x => x.ExecuteQuery(It.IsAny<TableQuery<MeetingNotificationItemTableEntity>>(), It.IsAny<TableRequestOptions>(), It.IsAny<OperationContext>())).Returns(notificationList);
-            classUnderTest = new TableStorageEmailRepository(options, this.cloudStorageClient.Object, this.logger.Object, this.mailAttachmentRepository.Object);
+            classUnderTest = new TableStorageEmailRepository(eventsDBSettings, this.CosmosDBQueryClient.Object, this.CosmosLinqQuery.Object, options, this.cloudStorageClient.Object, this.logger.Object, this.mailAttachmentRepository.Object);
             result = await classUnderTest.GetPendingOrFailedMeetingNotificationsByDateRange(this.dateRange, this.applicationName, null);
             Assert.IsNull(result);
         }
