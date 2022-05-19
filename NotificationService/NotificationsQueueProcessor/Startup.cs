@@ -83,22 +83,22 @@ namespace NotificationsQueueProcessor
                 _ = builder.Services.Configure<CosmosDBSetting>(s => s.Uri = configuration[ConfigConstants.CosmosDBURIConfigKey]);
                 _ = builder.Services.AddScoped<ICosmosLinqQuery, CustomCosmosLinqQuery>();
                 _ = builder.Services.AddSingleton<ICosmosDBQueryClient, CosmosDBQueryClient>();
-                _ = builder.Services.AddScoped<EmailNotificationRepository>();
-                _ = builder.Services.AddScoped<IEmailNotificationRepository, EmailNotificationRepository>(s => s.GetService<EmailNotificationRepository>());
+                _ = builder.Services.AddSingleton<EmailNotificationRepository>();
+                _ = builder.Services.AddSingleton<IEmailNotificationRepository, EmailNotificationRepository>(s => s.GetService<EmailNotificationRepository>());
             }
 
             _ = builder.Services.Configure<CosmosDBSetting>(configuration.GetSection(ConfigConstants.EventStoreDBConfigSectionKey));
             _ = builder.Services.Configure<CosmosDBSetting>(s => s.Key = configuration[ConfigConstants.EventStoreDBKeyConfigKey]);
             _ = builder.Services.Configure<CosmosDBSetting>(s => s.Uri = configuration[ConfigConstants.EventStoreDBURIConfigKey]);
-            _ = builder.Services.AddScoped<ICosmosLinqQuery, CustomCosmosLinqQuery>();
+            _ = builder.Services.AddSingleton<ICosmosLinqQuery, CustomCosmosLinqQuery>();
             _ = builder.Services.AddSingleton<ICosmosDBQueryClient, CosmosDBQueryClient>();
 
             _ = builder.Services.Configure<StorageAccountSetting>(configuration.GetSection(ConfigConstants.StorageAccountConfigSectionKey));
             _ = builder.Services.Configure<StorageAccountSetting>(s => s.ConnectionString = configuration[ConfigConstants.StorageAccountConnectionStringConfigKey]);
-            _ = builder.Services.AddScoped<IRepositoryFactory, RepositoryFactory>();
-            _ = builder.Services.AddScoped<TableStorageEmailRepository>();
-            _ = builder.Services.AddScoped<IEmailNotificationRepository, TableStorageEmailRepository>(s => s.GetService<TableStorageEmailRepository>());
-            _ = builder.Services.AddScoped<ITableStorageClient, TableStorageClient>();
+            _ = builder.Services.AddSingleton<IRepositoryFactory, RepositoryFactory>();
+            _ = builder.Services.AddSingleton<TableStorageEmailRepository>();
+            _ = builder.Services.AddSingleton<IEmailNotificationRepository, TableStorageEmailRepository>(s => s.GetService<TableStorageEmailRepository>());
+            _ = builder.Services.AddSingleton<ITableStorageClient, TableStorageClient>();
             _ = builder.Services.AddHttpClient<IHttpClientHelper, HttpClientHelper>();
 
             _ = builder.Services.BuildServiceProvider();
