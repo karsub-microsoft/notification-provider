@@ -28,7 +28,7 @@ namespace NotificationService.UnitTests.Data.Repositories
         [Test]
         public void UpdateEmailNotificationItemEntitiesTestInvalidInput()
         {
-            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await this.EmailNotificationRepository.UpdateEmailNotificationItemEntities(null));
+            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await this.EmailNotificationRepository.UpdateEmailNotificationItemEntities(null).ConfigureAwait(false));
         }
 
         /// <summary>
@@ -37,9 +37,9 @@ namespace NotificationService.UnitTests.Data.Repositories
         [Test]
         public void UpdateEmailNotificationItemEntitiesTestValidInput()
         {
-            var result = this.EmailNotificationRepository.UpdateEmailNotificationItemEntities(this.NotificationEntities);
+            var result = this.EmailNotificationRepository.UpdateEmailNotificationItemEntities(NotificationEntities);
             Assert.AreEqual(result.Status.ToString(), "RanToCompletion");
-            this.CosmosDBQueryClient.Verify(cdq => cdq.GetCosmosContainer(It.IsAny<string>(), this.MailHistoryContainerName), Times.Once);
+            this.CosmosDBQueryClient.Verify(cdq => cdq.GetCosmosContainer(It.IsAny<string>(), MailHistoryContainerName), Times.Once);
             this.EmailHistoryContainer.Verify(container => container.UpsertItemAsync(It.IsAny<EmailNotificationItemCosmosDbEntity>(), null, null, It.IsAny<CancellationToken>()), Times.Exactly(2));
             Assert.Pass();
         }

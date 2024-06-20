@@ -85,7 +85,7 @@ namespace NotificationsQueueProcessor
         /// </summary>
         private async Task RefreshKeys()
         {
-            _ = await this.configurationRefresher.TryRefreshAsync();
+            _ = await this.configurationRefresher.TryRefreshAsync().ConfigureAwait(false);
         }
 
         /// <summary>
@@ -132,11 +132,11 @@ namespace NotificationsQueueProcessor
                     this.logger.TraceVerbose($"ProcessNotificationQueueItem fetching token to call notification service endpoint...", traceProps);
 
                     this.logger.TraceInformation($"ProcessNotificationQueueItem calling notification service endpoint...", traceProps);
-                    var response = await this.httpClientHelper.PostAsync($"{notificationServiceEndpoint}/v1/{notifType}/process/{queueNotificationItem.Application}", stringContent);
+                    var response = await this.httpClientHelper.PostAsync($"{notificationServiceEndpoint}/v1/{notifType}/process/{queueNotificationItem.Application}", stringContent).ConfigureAwait(false);
                     this.logger.TraceInformation($"ProcessNotificationQueueItem received response from notification service endpoint.", traceProps);
                     if (!response.IsSuccessStatusCode)
                     {
-                        var content = await response.Content.ReadAsStringAsync();
+                        var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                         this.logger.WriteException(new Exception($"An error occurred while processing {notifQueueItem} in ProcessNotificationQueueItem. Details: [StatusCode = {response.StatusCode}, Content = {content}]."), traceProps);
                     }
                 }
@@ -166,7 +166,7 @@ namespace NotificationsQueueProcessor
                 }
 
                 this.logger.WriteException(ex, traceProps);
-                await this.UpdateStatusOfNotificationItemsAsync(queueNotificationItem.NotificationIds, NotificationItemStatus.Failed, ex.Message);
+                await this.UpdateStatusOfNotificationItemsAsync(queueNotificationItem.NotificationIds, NotificationItemStatus.Failed, ex.Message).ConfigureAwait(false);
             }
             finally
             {

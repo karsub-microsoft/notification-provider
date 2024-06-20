@@ -41,7 +41,7 @@ namespace NotificationService.FunctionalTests
             string meetingInviteQueueEndpoint = $"{this.Configuration[FunctionalConstants.NotificationHandlerUrl]}/v1/meetinginvite/queue/{this.Configuration[FunctionalConstants.Application]}";
             using (HttpClient httpClient = new HttpClient())
             {
-                string bearerToken = await this.tokenUtility.GetTokenAsync();
+                string bearerToken = await this.tokenUtility.GetTokenAsync().ConfigureAwait(false);
                 if (bearerToken != null)
                 {
                     httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(FunctionalConstants.Bearer, bearerToken);
@@ -50,7 +50,7 @@ namespace NotificationService.FunctionalTests
 
                     if (!response.IsSuccessStatusCode)
                     {
-                        var content = await response.Content.ReadAsStringAsync();
+                        var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                         Assert.Fail();
                     }
                     else
@@ -61,7 +61,7 @@ namespace NotificationService.FunctionalTests
                         Assert.IsTrue(notificationResponse.Status == NotificationItemStatus.Queued);
 
                         var notificationId = notificationResponse.NotificationId;
-                        MeetingInviteMessage inviteMessage = await GetMeetingNotificationMessage(notificationId, httpClient);
+                        MeetingInviteMessage inviteMessage = await GetMeetingNotificationMessage(notificationId, httpClient).ConfigureAwait(false);
                         if (inviteMessage != null)
                         {
                             Assert.IsTrue(meetingInviteItems[0].Subject == inviteMessage.Subject);
@@ -78,7 +78,7 @@ namespace NotificationService.FunctionalTests
 
                         for (int i = 0; i < retryCount; i++)
                         {
-                            MeetingInviteReportResponse inviteReportResponse = await GetMeetingInviteReportTest(notificationId, httpClient);
+                            MeetingInviteReportResponse inviteReportResponse = await GetMeetingInviteReportTest(notificationId, httpClient).ConfigureAwait(false);
                             if (inviteReportResponse != null)
                             {
                                 NotificationItemStatus notificationItemStatus = Enum.TryParse<NotificationItemStatus>(inviteReportResponse.Status, out notificationItemStatus) ? notificationItemStatus : NotificationItemStatus.Queued;
@@ -105,7 +105,7 @@ namespace NotificationService.FunctionalTests
                                                 Assert.Fail();
                                                 break;
                                             }
-                                            await Task.Delay(delayTime);
+                                            await Task.Delay(delayTime).ConfigureAwait(false);
                                             continue;
                                         }
                                 }
@@ -143,7 +143,7 @@ namespace NotificationService.FunctionalTests
             var response = await httpClient.PostAsync(inviteReportEndpoint, stringContent).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
-                var content = await response.Content.ReadAsStringAsync();
+                var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 Assert.Fail();
             }
             else
@@ -168,7 +168,7 @@ namespace NotificationService.FunctionalTests
             var response = await httpClient.GetAsync(inviteMessageEndpoint).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
-                var content = await response.Content.ReadAsStringAsync();
+                var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             }
             else
             {
@@ -210,7 +210,7 @@ namespace NotificationService.FunctionalTests
             string meetingInviteQueueEndpoint = $"{this.Configuration[FunctionalConstants.NotificationHandlerUrl]}/v1/meetinginvite/queue/{this.Configuration[FunctionalConstants.Application]}";
             using (HttpClient httpClient = new HttpClient())
             {
-                string bearerToken = await this.tokenUtility.GetTokenAsync();
+                string bearerToken = await this.tokenUtility.GetTokenAsync().ConfigureAwait(false);
                 if (bearerToken != null)
                 {
                     httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(FunctionalConstants.Bearer, bearerToken);
@@ -219,7 +219,7 @@ namespace NotificationService.FunctionalTests
 
                     if (!response.IsSuccessStatusCode)
                     {
-                        var content = await response.Content.ReadAsStringAsync();
+                        var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                         Assert.Fail();
                     }
                     else
@@ -230,7 +230,7 @@ namespace NotificationService.FunctionalTests
                         Assert.IsTrue(notificationResponse.Status == NotificationItemStatus.Queued);
 
                         var notificationId = notificationResponse.NotificationId;
-                        MeetingInviteMessage inviteMessage = await GetMeetingNotificationMessage(notificationId, httpClient);
+                        MeetingInviteMessage inviteMessage = await GetMeetingNotificationMessage(notificationId, httpClient).ConfigureAwait(false);
                         if (inviteMessage != null)
                         {
                             Assert.IsTrue(meetingInviteItems[0].Subject == inviteMessage.Subject);
@@ -277,7 +277,7 @@ namespace NotificationService.FunctionalTests
             string meetingInviteQueueEndpoint = $"{this.Configuration[FunctionalConstants.NotificationServiceUrl]}/v1/meetinginvite/send/{this.Configuration[FunctionalConstants.Application]}";
             using (HttpClient httpClient = new HttpClient())
             {
-                string bearerToken = await this.tokenUtility.GetTokenAsync();
+                string bearerToken = await this.tokenUtility.GetTokenAsync().ConfigureAwait(false);
                 if (bearerToken != null)
                 {
                     httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(FunctionalConstants.Bearer, bearerToken);
@@ -286,7 +286,7 @@ namespace NotificationService.FunctionalTests
 
                     if (!response.IsSuccessStatusCode)
                     {
-                        var content = await response.Content.ReadAsStringAsync();
+                        var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                         Assert.Fail();
                     }
                     else

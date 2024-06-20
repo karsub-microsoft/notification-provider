@@ -8,7 +8,7 @@ namespace NotificationService.UnitTests.Controllers.V1.EmailController
     using System.Diagnostics.CodeAnalysis;
     using System.Linq;
     using System.Threading.Tasks;
-    using Microsoft.Azure.Storage.Queue;
+    using Azure.Storage.Queues;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.Options;
     using Moq;
@@ -48,9 +48,9 @@ namespace NotificationService.UnitTests.Controllers.V1.EmailController
         private Mock<ICloudStorageClient> cloudStorageClient;
         private Mock<IEmailManager> emailManager;
         private Mock<ILogger> logger;
-        private CloudQueue cloudQueue;
         private IConfiguration configuration;
         private Mock<IOptions<MSGraphSetting>> msGraphSettingOptions;
+        private QueueClient cloudQueue;
 
         /// <summary>
         /// Initialization for the tests.
@@ -71,9 +71,8 @@ namespace NotificationService.UnitTests.Controllers.V1.EmailController
             };
 
             this.configuration = new ConfigurationBuilder().AddInMemoryCollection(config).Build();
-            this.cloudQueue = new CloudQueue(new Uri("https://test.com/endpoint"));
             _ = this.cloudStorageClient.Setup(x => x.GetCloudQueue(It.IsAny<string>())).Returns(this.cloudQueue);
-            _ = this.cloudStorageClient.Setup(x => x.QueueCloudMessages(It.IsAny<CloudQueue>(), It.IsAny<IEnumerable<string>>(), It.IsAny<TimeSpan>()));
+            _ = this.cloudStorageClient.Setup(x => x.QueueCloudMessages(It.IsAny<IEnumerable<string>>(), It.IsAny<TimeSpan>()));
             _ = this.logger.Setup(x => x.TraceInformation(It.IsAny<string>(), It.IsAny<IDictionary<string, string>>()));
         }
 
@@ -104,8 +103,8 @@ namespace NotificationService.UnitTests.Controllers.V1.EmailController
         {
             EmailController emailController = new EmailController(this.emailHandlerManager.Object, this.mailTemplateManager.Object, this.logger.Object);
 
-            _ = Assert.ThrowsAsync<ArgumentException>(async () => await emailController.ResendEmailNotifications(null, this.notificationIds));
-            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await emailController.ResendEmailNotifications(this.applicationName, null));
+            _ = Assert.ThrowsAsync<ArgumentException>(async () => await emailController.ResendEmailNotifications(null, this.notificationIds).ConfigureAwait(false));
+            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await emailController.ResendEmailNotifications(this.applicationName, null).ConfigureAwait(false));
         }
 
         /// <summary>
@@ -118,7 +117,7 @@ namespace NotificationService.UnitTests.Controllers.V1.EmailController
             var notificationItems = this.GetEmailNotificationItemEntities();
             _ = this.emailManager.Setup(x => x.GetEmailNotificationsByDateRangeAndStatus(It.IsAny<string>(), It.IsAny<DateTimeRange>(), It.IsAny<List<NotificationItemStatus>>())).ReturnsAsync(notificationItems);
             var classUnderTest = new EmailHandlerManager(this.configuration, this.msGraphSettingOptions.Object, this.cloudStorageClient.Object, this.logger.Object, this.emailManager.Object);
-            var result = await classUnderTest.ResendEmailNotificationsByDateRange(this.applicationName, this.dateRange);
+            var result = await classUnderTest.ResendEmailNotificationsByDateRange(this.applicationName, this.dateRange).ConfigureAwait(false);
             Assert.IsNotNull(result);
             Assert.AreEqual(result.Count, 1);
             Assert.AreEqual(result.FirstOrDefault().NotificationId, notificationItems.FirstOrDefault().NotificationId);
@@ -135,13 +134,13 @@ namespace NotificationService.UnitTests.Controllers.V1.EmailController
             IList<EmailNotificationItemEntity> notificationItems = null;
             _ = this.emailManager.Setup(x => x.GetEmailNotificationsByDateRangeAndStatus(It.IsAny<string>(), It.IsAny<DateTimeRange>(), It.IsAny<List<NotificationItemStatus>>())).ReturnsAsync(notificationItems);
             var classUnderTest = new EmailHandlerManager(this.configuration, this.msGraphSettingOptions.Object, this.cloudStorageClient.Object, this.logger.Object, this.emailManager.Object);
-            var result = await classUnderTest.ResendEmailNotificationsByDateRange(this.applicationName, this.dateRange);
+            var result = await classUnderTest.ResendEmailNotificationsByDateRange(this.applicationName, this.dateRange).ConfigureAwait(false);
             Assert.IsNull(result);
 
             notificationItems = new List<EmailNotificationItemEntity>();
             _ = this.emailManager.Setup(x => x.GetEmailNotificationsByDateRangeAndStatus(It.IsAny<string>(), It.IsAny<DateTimeRange>(), It.IsAny<List<NotificationItemStatus>>())).ReturnsAsync(notificationItems);
             classUnderTest = new EmailHandlerManager(this.configuration, this.msGraphSettingOptions.Object, this.cloudStorageClient.Object, this.logger.Object, this.emailManager.Object);
-            result = await classUnderTest.ResendEmailNotificationsByDateRange(this.applicationName, this.dateRange);
+            result = await classUnderTest.ResendEmailNotificationsByDateRange(this.applicationName, this.dateRange).ConfigureAwait(false);
             Assert.IsNull(result);
         }
 

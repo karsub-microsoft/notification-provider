@@ -63,8 +63,8 @@ namespace NotificationService.UnitTests.Controllers.V1.EmailController
             EmailController emailController = new EmailController(this.emailServiceManager.Object, this.logger);
             QueueNotificationItem queueNotificationItem = new QueueNotificationItem { NotificationIds = new string[] { Guid.NewGuid().ToString() } };
 
-            _ = Assert.ThrowsAsync<ArgumentException>(async () => await emailController.ProcessQueuedEmailNotifications(null, queueNotificationItem));
-            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await emailController.ProcessQueuedEmailNotifications("TestApp", null));
+            _ = Assert.ThrowsAsync<ArgumentException>(async () => await emailController.ProcessQueuedEmailNotifications(null, queueNotificationItem).ConfigureAwait(false));
+            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await emailController.ProcessQueuedEmailNotifications("TestApp", null).ConfigureAwait(false));
         }
     }
 }

@@ -75,7 +75,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.V1.EmailHandlerManagerTe
             _ = this.mockedEmailManager.Setup(x => x.NotificationEntitiesToResponse(new List<NotificationResponse>(), It.Is<List<MeetingNotificationItemEntity>>(y => y.Any(c => c.Application == "TestApp")))).Returns(new List<NotificationResponse> { new NotificationResponse { NotificationId = "notificationId1" } });
             var emailHandler = new EmailHandlerManager(this.Configuration, this.msGraphSettings, this.mockedCloudStorageClient.Object, this.Logger, this.mockedEmailManager.Object);
             var meetingNotificationItems = new List<MeetingNotificationItem> { new MeetingNotificationItem { RequiredAttendees = "user@contoso.com" } };
-            var response = await emailHandler.QueueMeetingNotifications("TestApp", meetingNotificationItems.ToArray());
+            var response = await emailHandler.QueueMeetingNotifications("TestApp", meetingNotificationItems.ToArray()).ConfigureAwait(false);
             Assert.IsNotNull(response);
             Assert.IsTrue(response.Count == 1);
             Assert.IsTrue(response[0].NotificationId == "notificationId1");

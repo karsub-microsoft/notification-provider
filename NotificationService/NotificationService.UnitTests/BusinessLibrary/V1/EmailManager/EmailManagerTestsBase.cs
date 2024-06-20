@@ -9,7 +9,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.V1.EmailManager
     using System.Net;
     using System.Net.Http.Headers;
     using System.Threading.Tasks;
-    using Microsoft.Azure.Storage.Queue;
+    using Azure.Storage.Queues;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.Options;
     using Moq;
@@ -75,17 +75,17 @@ namespace NotificationService.UnitTests.BusinessLibrary.V1.EmailManager
         /// <summary>
         /// Gets Test Application name.
         /// </summary>
-        public string ApplicationName => "TestApp";
+        public static string ApplicationName => "TestApp";
 
         /// <summary>
         /// Gets Test User Token value.
         /// </summary>
-        public string TestToken => "TokenValue";
+        public static string TestToken => "TokenValue";
 
         /// <summary>
         /// Gets Email notification items array to be used in tests.
         /// </summary>
-        public EmailNotificationItem[] EmailNotificationItems => new EmailNotificationItem[]
+        public static EmailNotificationItem[] EmailNotificationItems => new EmailNotificationItem[]
             {
                 new EmailNotificationItem() { To = "user@contoso.com", Subject = "TestSubject", Body = "TestBody" },
             };
@@ -189,7 +189,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.V1.EmailManager
             {
                 new ApplicationAccounts()
                 {
-                    ApplicationName = this.ApplicationName,
+                    ApplicationName = ApplicationName,
                     ValidAppIds = Guid.NewGuid().ToString(),
                     Accounts = new List<AccountCredential>()
                     {
@@ -211,7 +211,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.V1.EmailManager
             {
                 new EmailNotificationItemEntity()
                 {
-                    Application = this.ApplicationName,
+                    Application = ApplicationName,
                     NotificationId = notificationId,
                     To = "user@contoso.com",
                     Subject = "TestEmailSubject",
@@ -223,7 +223,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.V1.EmailManager
             {
                 new MailSettings()
                 {
-                    ApplicationName = this.ApplicationName,
+                    ApplicationName = ApplicationName,
                     MailOn = true,
                     SendForReal = false,
                     ToOverride = "user@contoso.com",
@@ -270,11 +270,11 @@ namespace NotificationService.UnitTests.BusinessLibrary.V1.EmailManager
 
             _ = this.TokenHelper
                 .Setup(th => th.GetAccessTokenForSelectedAccount(It.IsAny<AccountCredential>()))
-                .Returns(Task.FromResult(this.TestToken));
+                .Returns(Task.FromResult(TestToken));
 
             _ = this.TokenHelper
                 .Setup(th => th.GetAuthenticationHeaderFromToken(It.IsAny<string>()))
-                .Returns(Task.FromResult(new System.Net.Http.Headers.AuthenticationHeaderValue(ApplicationConstants.BearerAuthenticationScheme, this.TestToken)));
+                .Returns(Task.FromResult(new System.Net.Http.Headers.AuthenticationHeaderValue(ApplicationConstants.BearerAuthenticationScheme, TestToken)));
 
             _ = this.MsGraphProvider
                 .Setup(gp => gp.ProcessEmailRequestBatch(It.IsAny<AuthenticationHeaderValue>(), It.IsAny<GraphBatchRequest>()))
@@ -298,10 +298,10 @@ namespace NotificationService.UnitTests.BusinessLibrary.V1.EmailManager
 
             _ = this.CloudStorageClient
                 .Setup(csa => csa.GetCloudQueue(It.IsAny<string>()))
-                .Returns(new CloudQueue(new Uri(this.cloudQueueUri)));
+                .Returns(new QueueClient(new Uri(this.cloudQueueUri)));
 
             _ = this.CloudStorageClient
-                .Setup(csa => csa.QueueCloudMessages(It.IsAny<CloudQueue>(), It.IsAny<IEnumerable<string>>(), null))
+                .Setup(csa => csa.QueueCloudMessages(It.IsAny<IEnumerable<string>>(), null))
                 .Returns(Task.CompletedTask);
 
             _ = this.EmailAccountManager

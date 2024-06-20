@@ -109,9 +109,9 @@ namespace NotificationService.UnitTests.BusinessLibrary.V1.EmailManager
             var repo = new MailAttachmentRepository(this.Logger, this.MockedCloudStorageClient.Object, this.EncryptionService.Object);
             var updatednotifications = await repo.DownloadEmail(notifications, "TestApp").ConfigureAwait(false);
             Assert.IsTrue(updatednotifications.Count == 1);
-            Assert.IsTrue(updatednotifications.First().Body.Equals("Test Body"));
-            Assert.IsTrue(updatednotifications.First().Attachments.Any(x => x.FileBase64.Equals("VEhpcyBpcyBhIHRlc3QgYXR0YWNobWVudCBmaWxlLg==")));
-            Assert.IsTrue(updatednotifications.First().Attachments.Any(x => x.FileName.Equals("Test.txt")));
+            Assert.IsTrue(updatednotifications.First().Body.Equals("Test Body", StringComparison.Ordinal));
+            Assert.IsTrue(updatednotifications.First().Attachments.Any(x => x.FileBase64.Equals("VEhpcyBpcyBhIHRlc3QgYXR0YWNobWVudCBmaWxlLg==", StringComparison.Ordinal)));
+            Assert.IsTrue(updatednotifications.First().Attachments.Any(x => x.FileName.Equals("Test.txt", StringComparison.Ordinal)));
             Assert.IsTrue(updatednotifications.First().Attachments.Any(x => x.IsInline));
             this.MockedCloudStorageClient.Verify(x => x.DownloadBlobAsync($"TestApp/{ApplicationConstants.EmailNotificationsFolderName}/{notificationId}"), Times.Once);
             this.EncryptionService.Verify(x => x.Decrypt(It.Is<string>(x => x == "Test Encrypted String")), Times.Once);
@@ -139,9 +139,9 @@ namespace NotificationService.UnitTests.BusinessLibrary.V1.EmailManager
             var repo = new MailAttachmentRepository(this.Logger, this.MockedCloudStorageClient.Object, this.EncryptionService.Object);
             var updatednotifications = await repo.DownloadMeetingInvite(notifications, "TestApp").ConfigureAwait(false);
             Assert.IsTrue(updatednotifications.Count == 1);
-            Assert.IsTrue(updatednotifications.First().Body.Equals("Test Body"));
-            Assert.IsTrue(updatednotifications.First().Attachments.Any(x => x.FileBase64.Equals("VEhpcyBpcyBhIHRlc3QgYXR0YWNobWVudCBmaWxlLg==")));
-            Assert.IsTrue(updatednotifications.First().Attachments.Any(x => x.FileName.Equals("Test.txt")));
+            Assert.IsTrue(updatednotifications.First().Body.Equals("Test Body", StringComparison.Ordinal));
+            Assert.IsTrue(updatednotifications.First().Attachments.Any(x => x.FileBase64.Equals("VEhpcyBpcyBhIHRlc3QgYXR0YWNobWVudCBmaWxlLg==", StringComparison.Ordinal)));
+            Assert.IsTrue(updatednotifications.First().Attachments.Any(x => x.FileName.Equals("Test.txt", StringComparison.Ordinal)));
             Assert.IsTrue(updatednotifications.First().Attachments.Any(x => x.IsInline));
             this.MockedCloudStorageClient.Verify(x => x.DownloadBlobAsync($"TestApp/{ApplicationConstants.MeetingNotificationsFolderName}/{notificationId}"), Times.Once);
             this.EncryptionService.Verify(x => x.Decrypt(It.Is<string>(x => x == "Test Encrypted String")), Times.Once);

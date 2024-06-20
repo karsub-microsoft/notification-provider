@@ -13,6 +13,10 @@ namespace NotificationService.Common
         /// </summary>
         public string ConnectionString { get; set; }
 
+        public string QueueConnectionName { get; set; }
+
+        public string BlobConnectionName { get; set; }
+
         /// <summary>
         /// Gets or sets the Blob Container Name.
         /// </summary>

@@ -7,7 +7,6 @@ namespace NotificationService.UnitTests.BusinesLibrary.V1.EmailManager
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
     using System.Threading.Tasks;
-    using Microsoft.Azure.Storage.Queue;
     using Moq;
     using NotificationService.Contracts;
     using NotificationService.UnitTests.BusinessLibrary.V1.EmailManager;
@@ -31,10 +30,10 @@ namespace NotificationService.UnitTests.BusinesLibrary.V1.EmailManager
         [Test]
         public void ResendEmailNotificationsTestValidInput()
         {
-            Task<IList<NotificationResponse>> result = this.EmailHandlerManager.ResendNotifications(this.ApplicationName, new string[] { Guid.NewGuid().ToString() });
+            Task<IList<NotificationResponse>> result = this.EmailHandlerManager.ResendNotifications(ApplicationName, new string[] { Guid.NewGuid().ToString() });
             Assert.AreEqual(result.Status.ToString(), "RanToCompletion");
             this.CloudStorageClient.Verify(csc => csc.GetCloudQueue(It.IsAny<string>()), Times.Once);
-            this.CloudStorageClient.Verify(csc => csc.QueueCloudMessages(It.IsAny<CloudQueue>(), It.IsAny<IList<string>>(), null), Times.Once);
+            this.CloudStorageClient.Verify(csc => csc.QueueCloudMessages(It.IsAny<IList<string>>(), null), Times.Once);
             Assert.Pass();
         }
 
@@ -44,8 +43,8 @@ namespace NotificationService.UnitTests.BusinesLibrary.V1.EmailManager
         [Test]
         public void ResendEmailNotificationsTestInvalidInput()
         {
-            _ = Assert.ThrowsAsync<ArgumentException>(async () => await this.EmailHandlerManager.ResendNotifications(null, new string[] { Guid.NewGuid().ToString() }));
-            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await this.EmailHandlerManager.ResendNotifications(this.ApplicationName, null));
+            _ = Assert.ThrowsAsync<ArgumentException>(async () => await this.EmailHandlerManager.ResendNotifications(null, new string[] { Guid.NewGuid().ToString() }).ConfigureAwait(false));
+            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await this.EmailHandlerManager.ResendNotifications(ApplicationName, null).ConfigureAwait(false));
         }
     }
 }

@@ -64,17 +64,17 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
             _ = this.msGraphProvider.Setup(x => x.ProcessEmailRequestBatch(It.IsAny<AuthenticationHeaderValue>(), It.IsAny<GraphBatchRequest>())).ReturnsAsync(new List<NotificationBatchItemResponse> { new NotificationBatchItemResponse { Status = System.Net.HttpStatusCode.Accepted } });
             var provider = new MSGraphNotificationProvider(this.configuration.Object, new EmailAccountManager(), this.logger.Object, this.mSGraphSetting.Object, this.tokenHelper.Object, this.msGraphProvider.Object, this.emailManager.Object);
             var notifications = new List<EmailNotificationItemEntity> { new EmailNotificationItemEntity { Application = "TestAppName", SendOnUtcDate = DateTime.Parse("2021-01-18T12:00:00Z"), To = "test@microsoft.com" } };
-            await provider.ProcessNotificationEntities("TestAppName", notifications);
+            await provider.ProcessNotificationEntities("TestAppName", notifications).ConfigureAwait(false);
             Assert.IsTrue(notifications.Count == 1);
             Assert.IsTrue(notifications.Any(x => x.Status == NotificationItemStatus.Failed));
 
             _ = this.tokenHelper.Setup(x => x.GetAuthenticationHeaderValueForSelectedAccount(It.IsAny<AccountCredential>())).ReturnsAsync(new AuthenticationHeaderValue("Test"));
             provider = new MSGraphNotificationProvider(this.configuration.Object, new EmailAccountManager(), this.logger.Object, this.mSGraphSetting.Object, this.tokenHelper.Object, this.msGraphProvider.Object, this.emailManager.Object);
-            await provider.ProcessNotificationEntities("TestAppName", notifications);
+            await provider.ProcessNotificationEntities("TestAppName", notifications).ConfigureAwait(false);
             Assert.IsTrue(notifications.Count == 1);
             Assert.IsTrue(notifications.Any(x => x.Status == NotificationItemStatus.Sent));
-            this.msGraphProvider.Verify(x => x.ProcessEmailRequestBatch(It.IsAny<AuthenticationHeaderValue>(), It.Is<GraphBatchRequest>(b => b.Requests.Any(g => ((NotificationService.Contracts.EmailMessagePayload)g.Body).Message.SingleValueExtendedProperties[0].Id.Contains("SystemTime 0x3FEF")))), Times.Once);
-            this.msGraphProvider.Verify(x => x.ProcessEmailRequestBatch(It.IsAny<AuthenticationHeaderValue>(), It.Is<GraphBatchRequest>(b => b.Requests.Any(g => ((NotificationService.Contracts.EmailMessagePayload)g.Body).Message.SingleValueExtendedProperties[0].Value.Contains("2021-01-18")))), Times.Once);
+            this.msGraphProvider.Verify(x => x.ProcessEmailRequestBatch(It.IsAny<AuthenticationHeaderValue>(), It.Is<GraphBatchRequest>(b => b.Requests.Any(g => ((EmailMessagePayload)g.Body).Message.SingleValueExtendedProperties[0].Id.Contains("SystemTime 0x3FEF", StringComparison.Ordinal)))), Times.Once);
+            this.msGraphProvider.Verify(x => x.ProcessEmailRequestBatch(It.IsAny<AuthenticationHeaderValue>(), It.Is<GraphBatchRequest>(b => b.Requests.Any(g => ((EmailMessagePayload)g.Body).Message.SingleValueExtendedProperties[0].Value.Contains("2021-01-18", StringComparison.Ordinal)))), Times.Once);
         }
     }
 }

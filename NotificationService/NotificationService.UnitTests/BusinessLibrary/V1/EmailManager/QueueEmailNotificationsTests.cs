@@ -7,7 +7,6 @@ namespace NotificationService.UnitTests.BusinesLibrary.V1.EmailManager
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
     using System.Threading.Tasks;
-    using Microsoft.Azure.Storage.Queue;
     using Moq;
     using NotificationService.Contracts;
     using NotificationService.Data;
@@ -32,10 +31,10 @@ namespace NotificationService.UnitTests.BusinesLibrary.V1.EmailManager
         [Test]
         public void QueueEmailNotificationsTestValidInput()
         {
-            Task<IList<NotificationResponse>> result = this.EmailHandlerManager.QueueEmailNotifications(this.ApplicationName, this.EmailNotificationItems);
+            Task<IList<NotificationResponse>> result = this.EmailHandlerManager.QueueEmailNotifications(ApplicationName, EmailNotificationItems);
             Assert.AreEqual(result.Status.ToString(), "RanToCompletion");
             this.EmailNotificationRepository.Verify(repo => repo.GetRepository(StorageType.StorageAccount).CreateEmailNotificationItemEntities(It.IsAny<IList<EmailNotificationItemEntity>>(), It.IsAny<string>()), Times.Once);
-            this.CloudStorageClient.Verify(csa => csa.QueueCloudMessages(It.IsAny<CloudQueue>(), It.IsAny<IEnumerable<string>>(), null), Times.Once);
+            this.CloudStorageClient.Verify(csa => csa.QueueCloudMessages(It.IsAny<IEnumerable<string>>(), null), Times.Once);
             Assert.Pass();
         }
 
@@ -45,8 +44,8 @@ namespace NotificationService.UnitTests.BusinesLibrary.V1.EmailManager
         [Test]
         public void QueueEmailNotificationsTestInvalidInput()
         {
-            _ = Assert.ThrowsAsync<ArgumentException>(async () => await this.EmailHandlerManager.QueueEmailNotifications(null, this.EmailNotificationItems));
-            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await this.EmailHandlerManager.QueueEmailNotifications(this.ApplicationName, null));
+            _ = Assert.ThrowsAsync<ArgumentException>(async () => await this.EmailHandlerManager.QueueEmailNotifications(null, EmailNotificationItems).ConfigureAwait(false));
+            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await this.EmailHandlerManager.QueueEmailNotifications(ApplicationName, null).ConfigureAwait(false));
         }
     }
 }

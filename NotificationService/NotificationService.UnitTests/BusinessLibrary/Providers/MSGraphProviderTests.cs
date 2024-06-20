@@ -38,12 +38,12 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
         /// <summary>
         /// Gets Test User Token value.
         /// </summary>
-        public string TestToken => "TokenValue";
+        public static string TestToken => "TokenValue";
 
         /// <summary>
         /// Gets Test User Token value.
         /// </summary>
-        public AuthenticationHeaderValue TestTokenHeader => new AuthenticationHeaderValue(ApplicationConstants.BearerAuthenticationScheme, this.TestToken);
+        public static AuthenticationHeaderValue TestTokenHeader => new AuthenticationHeaderValue(ApplicationConstants.BearerAuthenticationScheme, TestToken);
 
         /// <summary>
         /// Initialization for the tests.
@@ -58,13 +58,13 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
         [Test]
         public async Task ProcessEmailRequestBatch_Response_Null()
         {
-            var graphRequests = this.GetGraphRequest();
+            var graphRequests = GetGraphRequest();
 
             Exception ex = null;
             var msGrpahProvider = new MSGraphProvider(this.MsGraphSetting, Options.Create(this.retrySetting), this.Logger, this.MockedHttpClient.Object);
             try
             {
-                var result = await msGrpahProvider.ProcessEmailRequestBatch(this.TestTokenHeader, graphRequests).ConfigureAwait(false);
+                var result = await msGrpahProvider.ProcessEmailRequestBatch(TestTokenHeader, graphRequests).ConfigureAwait(false);
             }
             catch (Exception e)
             {
@@ -81,9 +81,9 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
         [Test]
         public async Task ProcessEmailRequestBatch_CannotBeRetried()
         {
-            var graphRequests = this.GetGraphRequest();
+            var graphRequests = GetGraphRequest();
 
-            var httpresponsemessage = this.GetEmailResponseMessage(graphRequests, "ErrorSubmissionQuotaExceeded", "Quota Exceeded", HttpStatusCode.TooManyRequests);
+            var httpresponsemessage = GetEmailResponseMessage(graphRequests, "ErrorSubmissionQuotaExceeded", "Quota Exceeded", HttpStatusCode.TooManyRequests);
 
             var handlerMock = new Mock<HttpMessageHandler>();
             _ = handlerMock
@@ -99,7 +99,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
             var msGrpahProvider = new MSGraphProvider(this.MsGraphSetting, Options.Create(this.retrySetting), this.Logger, httpClient);
             try
             {
-                var result = await msGrpahProvider.ProcessEmailRequestBatch(this.TestTokenHeader, graphRequests).ConfigureAwait(false);
+                var result = await msGrpahProvider.ProcessEmailRequestBatch(TestTokenHeader, graphRequests).ConfigureAwait(false);
             }
             catch (Exception e)
             {
@@ -116,9 +116,9 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
         [Test]
         public async Task ProcessEmailRequestBatch_ErrorGettingToken_CannotBeRetried_2()
         {
-            var graphRequests = this.GetGraphRequest();
+            var graphRequests = GetGraphRequest();
 
-            var httpresponsemessage = this.GetEmailResponseMessage(graphRequests, "ErrorSendAsDenied", string.Empty, HttpStatusCode.TooManyRequests);
+            var httpresponsemessage = GetEmailResponseMessage(graphRequests, "ErrorSendAsDenied", string.Empty, HttpStatusCode.TooManyRequests);
             var handlerMock = new Mock<HttpMessageHandler>();
             _ = handlerMock
                .Protected()
@@ -133,7 +133,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
             var msGrpahProvider = new MSGraphProvider(this.MsGraphSetting, Options.Create(this.retrySetting), this.Logger, httpClient);
             try
             {
-                var result = await msGrpahProvider.ProcessEmailRequestBatch(this.TestTokenHeader, graphRequests).ConfigureAwait(false);
+                var result = await msGrpahProvider.ProcessEmailRequestBatch(TestTokenHeader, graphRequests).ConfigureAwait(false);
             }
             catch (Exception e)
             {
@@ -150,9 +150,9 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
         [Test]
         public async Task ProcessEmailRequestBatch_Success()
         {
-            var graphRequests = this.GetGraphRequest();
+            var graphRequests = GetGraphRequest();
 
-            var httpresponsemessage = this.GetEmailResponseMessage(graphRequests, null, null, HttpStatusCode.Accepted);
+            var httpresponsemessage = GetEmailResponseMessage(graphRequests, null, null, HttpStatusCode.Accepted);
 
             var handlerMock = new Mock<HttpMessageHandler>();
             _ = handlerMock
@@ -166,7 +166,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
             var httpClient = new HttpClient(handlerMock.Object);
 
             var msGrpahProvider = new MSGraphProvider(this.MsGraphSetting, Options.Create(this.retrySetting), this.Logger, httpClient);
-            var result = await msGrpahProvider.ProcessEmailRequestBatch(this.TestTokenHeader, graphRequests).ConfigureAwait(false);
+            var result = await msGrpahProvider.ProcessEmailRequestBatch(TestTokenHeader, graphRequests).ConfigureAwait(false);
             Assert.AreEqual(2, result.Where(x => x.Status == HttpStatusCode.Accepted).Count());
         }
 
@@ -182,14 +182,14 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
             var msGrpahProvider = new MSGraphProvider(this.MsGraphSetting, Options.Create(this.retrySetting), this.Logger, this.MockedHttpClient.Object);
             try
             {
-                var result = await msGrpahProvider.SendMeetingInvite(this.TestTokenHeader, this.GetInvitePayload(), notificationId).ConfigureAwait(false);
+                var result = await msGrpahProvider.SendMeetingInvite(TestTokenHeader, GetInvitePayload(), notificationId).ConfigureAwait(false);
             }
             catch (Exception e)
             {
                 ex = e;
             }
 
-            Assert.IsTrue(ex?.Message?.Contains($"An error occurred while sending notification id: {notificationId}"));
+            Assert.IsTrue(ex?.Message?.Contains($"An error occurred while sending notification id: {notificationId}", StringComparison.Ordinal));
         }
 
         /// <summary>
@@ -199,7 +199,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
         [Test]
         public async Task ProcessSendInvite_Response_BadRequest()
         {
-            HttpResponseMessage resp = this.GetHttpResponseMessage(HttpStatusCode.BadRequest, null);
+            HttpResponseMessage resp = GetHttpResponseMessage(HttpStatusCode.BadRequest, null);
             var handlerMock = new Mock<HttpMessageHandler>();
             _ = handlerMock
                .Protected()
@@ -214,14 +214,14 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
             var msGrpahProvider = new MSGraphProvider(this.MsGraphSetting, Options.Create(this.retrySetting), this.Logger, httpClient);
             try
             {
-                var result = await msGrpahProvider.SendMeetingInvite(this.TestTokenHeader, this.GetInvitePayload(), notificationId).ConfigureAwait(false);
+                var result = await msGrpahProvider.SendMeetingInvite(TestTokenHeader, GetInvitePayload(), notificationId).ConfigureAwait(false);
             }
             catch (Exception e)
             {
                 ex = e;
             }
 
-            Assert.IsTrue(ex?.Message?.Contains($"An error occurred while sending notification id: {notificationId}"));
+            Assert.IsTrue(ex?.Message?.Contains($"An error occurred while sending notification id: {notificationId}", StringComparison.Ordinal));
         }
 
         /// <summary>
@@ -231,7 +231,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
         [Test]
         public async Task ProcessSendInvite_Response_TooManyRequest()
         {
-            HttpResponseMessage resp = this.GetHttpResponseMessage(HttpStatusCode.TooManyRequests, null);
+            HttpResponseMessage resp = GetHttpResponseMessage(HttpStatusCode.TooManyRequests, null);
             var handlerMock = new Mock<HttpMessageHandler>();
             _ = handlerMock
                .Protected()
@@ -243,7 +243,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
             var httpClient = new HttpClient(handlerMock.Object);
             var notificationId = Guid.NewGuid().ToString();
             var msGrpahProvider = new MSGraphProvider(this.MsGraphSetting, Options.Create(this.retrySetting), this.Logger, httpClient);
-            var result = await msGrpahProvider.SendMeetingInvite(this.TestTokenHeader, this.GetInvitePayload(), notificationId).ConfigureAwait(false);
+            var result = await msGrpahProvider.SendMeetingInvite(TestTokenHeader, GetInvitePayload(), notificationId).ConfigureAwait(false);
             Assert.AreEqual(result.StatusCode, HttpStatusCode.TooManyRequests);
         }
 
@@ -254,7 +254,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
         [Test]
         public async Task ProcessSendInvite_RequestTimeout()
         {
-            HttpResponseMessage resp = this.GetHttpResponseMessage(HttpStatusCode.RequestTimeout, null);
+            HttpResponseMessage resp = GetHttpResponseMessage(HttpStatusCode.RequestTimeout, null);
             var handlerMock = new Mock<HttpMessageHandler>();
             _ = handlerMock
                .Protected()
@@ -266,7 +266,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
             var httpClient = new HttpClient(handlerMock.Object);
             var notificationId = Guid.NewGuid().ToString();
             var msGrpahProvider = new MSGraphProvider(this.MsGraphSetting, Options.Create(this.retrySetting), this.Logger, httpClient);
-            var result = await msGrpahProvider.SendMeetingInvite(this.TestTokenHeader, this.GetInvitePayload(), notificationId).ConfigureAwait(false);
+            var result = await msGrpahProvider.SendMeetingInvite(TestTokenHeader, GetInvitePayload(), notificationId).ConfigureAwait(false);
             Assert.AreEqual(result.StatusCode, HttpStatusCode.RequestTimeout);
         }
 
@@ -278,7 +278,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
         public async Task ProcessSendInvite_Success()
         {
             var id = Guid.NewGuid().ToString();
-            HttpResponseMessage resp = this.GetHttpResponseMessage(HttpStatusCode.Accepted, id);
+            HttpResponseMessage resp = GetHttpResponseMessage(HttpStatusCode.Accepted, id);
             var handlerMock = new Mock<HttpMessageHandler>();
             _ = handlerMock
                .Protected()
@@ -290,7 +290,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
             var httpClient = new HttpClient(handlerMock.Object);
             var notificationId = Guid.NewGuid().ToString();
             var msGrpahProvider = new MSGraphProvider(this.MsGraphSetting, Options.Create(this.retrySetting), this.Logger, httpClient);
-            var result = await msGrpahProvider.SendMeetingInvite(this.TestTokenHeader, this.GetInvitePayload(), notificationId).ConfigureAwait(false);
+            var result = await msGrpahProvider.SendMeetingInvite(TestTokenHeader, GetInvitePayload(), notificationId).ConfigureAwait(false);
             Assert.AreEqual(result.StatusCode, HttpStatusCode.Accepted);
             var res = JsonConvert.DeserializeObject<InviteResponse>(result.Result);
             Assert.AreEqual(res.EventId, id);
@@ -309,14 +309,14 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
             var msGrpahProvider = new MSGraphProvider(this.MsGraphSetting, Options.Create(this.retrySetting), this.Logger, this.MockedHttpClient.Object);
             try
             {
-                var result = await msGrpahProvider.UpdateMeetingInvite(this.TestTokenHeader, this.GetInvitePayload(), notificationId, eventId).ConfigureAwait(false);
+                var result = await msGrpahProvider.UpdateMeetingInvite(TestTokenHeader, GetInvitePayload(), notificationId, eventId).ConfigureAwait(false);
             }
             catch (Exception e)
             {
                 ex = e;
             }
 
-            Assert.IsTrue(ex?.Message?.Contains($"An error occurred while sending notification id: {notificationId}"));
+            Assert.IsTrue(ex?.Message?.Contains($"An error occurred while sending notification id: {notificationId}", StringComparison.Ordinal));
         }
 
         /// <summary>
@@ -327,7 +327,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
         public async Task ProcessUpdateInvite_Response_BadRequest()
         {
             var eventId = Guid.NewGuid().ToString();
-            HttpResponseMessage resp = this.GetHttpResponseMessage(HttpStatusCode.BadRequest, null);
+            HttpResponseMessage resp = GetHttpResponseMessage(HttpStatusCode.BadRequest, null);
             var handlerMock = new Mock<HttpMessageHandler>();
             _ = handlerMock
                .Protected()
@@ -342,14 +342,14 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
             var msGrpahProvider = new MSGraphProvider(this.MsGraphSetting, Options.Create(this.retrySetting), this.Logger, httpClient);
             try
             {
-                var result = await msGrpahProvider.UpdateMeetingInvite(this.TestTokenHeader, this.GetInvitePayload(), notificationId, eventId).ConfigureAwait(false);
+                var result = await msGrpahProvider.UpdateMeetingInvite(TestTokenHeader, GetInvitePayload(), notificationId, eventId).ConfigureAwait(false);
             }
             catch (Exception e)
             {
                 ex = e;
             }
 
-            Assert.IsTrue(ex?.Message?.Contains($"An error occurred while sending notification id: {notificationId}"));
+            Assert.IsTrue(ex?.Message?.Contains($"An error occurred while sending notification id: {notificationId}", StringComparison.Ordinal));
         }
 
         /// <summary>
@@ -360,7 +360,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
         public async Task ProcessUpdateInvite_Response_TooManyRequest()
         {
             var eventId = Guid.NewGuid().ToString();
-            HttpResponseMessage resp = this.GetHttpResponseMessage(HttpStatusCode.TooManyRequests, null);
+            HttpResponseMessage resp = GetHttpResponseMessage(HttpStatusCode.TooManyRequests, null);
             var handlerMock = new Mock<HttpMessageHandler>();
             _ = handlerMock
                .Protected()
@@ -372,7 +372,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
             var httpClient = new HttpClient(handlerMock.Object);
             var notificationId = Guid.NewGuid().ToString();
             var msGrpahProvider = new MSGraphProvider(this.MsGraphSetting, Options.Create(this.retrySetting), this.Logger, httpClient);
-            var result = await msGrpahProvider.UpdateMeetingInvite(this.TestTokenHeader, this.GetInvitePayload(), notificationId, eventId).ConfigureAwait(false);
+            var result = await msGrpahProvider.UpdateMeetingInvite(TestTokenHeader, GetInvitePayload(), notificationId, eventId).ConfigureAwait(false);
             Assert.AreEqual(result.StatusCode, HttpStatusCode.TooManyRequests);
         }
 
@@ -384,7 +384,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
         public async Task ProcessUpdateInvite_RequestTimeout()
         {
             var eventId = Guid.NewGuid().ToString();
-            HttpResponseMessage resp = this.GetHttpResponseMessage(HttpStatusCode.RequestTimeout, null);
+            HttpResponseMessage resp = GetHttpResponseMessage(HttpStatusCode.RequestTimeout, null);
             var handlerMock = new Mock<HttpMessageHandler>();
             _ = handlerMock
                .Protected()
@@ -396,7 +396,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
             var httpClient = new HttpClient(handlerMock.Object);
             var notificationId = Guid.NewGuid().ToString();
             var msGrpahProvider = new MSGraphProvider(this.MsGraphSetting, Options.Create(this.retrySetting), this.Logger, httpClient);
-            var result = await msGrpahProvider.UpdateMeetingInvite(this.TestTokenHeader, this.GetInvitePayload(), notificationId, eventId).ConfigureAwait(false);
+            var result = await msGrpahProvider.UpdateMeetingInvite(TestTokenHeader, GetInvitePayload(), notificationId, eventId).ConfigureAwait(false);
             Assert.AreEqual(result.StatusCode, HttpStatusCode.RequestTimeout);
         }
 
@@ -409,7 +409,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
         {
             var eventId = Guid.NewGuid().ToString();
             var id = Guid.NewGuid().ToString();
-            HttpResponseMessage resp = this.GetHttpResponseMessage(HttpStatusCode.Accepted, id);
+            HttpResponseMessage resp = GetHttpResponseMessage(HttpStatusCode.Accepted, id);
             var handlerMock = new Mock<HttpMessageHandler>();
             _ = handlerMock
                .Protected()
@@ -421,7 +421,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
             var httpClient = new HttpClient(handlerMock.Object);
             var notificationId = Guid.NewGuid().ToString();
             var msGrpahProvider = new MSGraphProvider(this.MsGraphSetting, Options.Create(this.retrySetting), this.Logger, httpClient);
-            var result = await msGrpahProvider.UpdateMeetingInvite(this.TestTokenHeader, this.GetInvitePayload(), notificationId, eventId).ConfigureAwait(false);
+            var result = await msGrpahProvider.UpdateMeetingInvite(TestTokenHeader, GetInvitePayload(), notificationId, eventId).ConfigureAwait(false);
             Assert.AreEqual(result.StatusCode, HttpStatusCode.Accepted);
             var res = JsonConvert.DeserializeObject<InviteResponse>(result.Result);
             Assert.AreEqual(res.EventId, id);
@@ -436,7 +436,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
         {
             var eventId = Guid.NewGuid().ToString();
             var id = Guid.NewGuid().ToString();
-            HttpResponseMessage resp = this.GetHttpResponseMessage(HttpStatusCode.NoContent, id);
+            HttpResponseMessage resp = GetHttpResponseMessage(HttpStatusCode.NoContent, id);
             var handlerMock = new Mock<HttpMessageHandler>();
             _ = handlerMock
                .Protected()
@@ -448,7 +448,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
             var httpClient = new HttpClient(handlerMock.Object);
             var notificationId = Guid.NewGuid().ToString();
             var msGrpahProvider = new MSGraphProvider(this.MsGraphSetting, Options.Create(this.retrySetting), this.Logger, httpClient);
-            var result = await msGrpahProvider.DeleteMeetingInvite(this.TestTokenHeader, notificationId, eventId).ConfigureAwait(false);
+            var result = await msGrpahProvider.DeleteMeetingInvite(TestTokenHeader, notificationId, eventId).ConfigureAwait(false);
             Assert.AreEqual(result.StatusCode, HttpStatusCode.NoContent);
         }
 
@@ -461,7 +461,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
         {
             var eventId = Guid.NewGuid().ToString();
             var id = Guid.NewGuid().ToString();
-            HttpResponseMessage resp = this.GetHttpResponseMessage(HttpStatusCode.RequestTimeout, id);
+            HttpResponseMessage resp = GetHttpResponseMessage(HttpStatusCode.RequestTimeout, id);
             var handlerMock = new Mock<HttpMessageHandler>();
             _ = handlerMock
                .Protected()
@@ -473,7 +473,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
             var httpClient = new HttpClient(handlerMock.Object);
             var notificationId = Guid.NewGuid().ToString();
             var msGrpahProvider = new MSGraphProvider(this.MsGraphSetting, Options.Create(this.retrySetting), this.Logger, httpClient);
-            var result = await msGrpahProvider.DeleteMeetingInvite(this.TestTokenHeader, notificationId, eventId).ConfigureAwait(false);
+            var result = await msGrpahProvider.DeleteMeetingInvite(TestTokenHeader, notificationId, eventId).ConfigureAwait(false);
             Assert.AreEqual(result.StatusCode, HttpStatusCode.RequestTimeout);
         }
 
@@ -486,7 +486,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
         {
             var eventId = Guid.NewGuid().ToString();
             var id = Guid.NewGuid().ToString();
-            HttpResponseMessage resp = this.GetHttpResponseMessage(HttpStatusCode.BadRequest, id);
+            HttpResponseMessage resp = GetHttpResponseMessage(HttpStatusCode.BadRequest, id);
             var handlerMock = new Mock<HttpMessageHandler>();
             _ = handlerMock
                .Protected()
@@ -501,14 +501,14 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
             Exception ex = null;
             try
             {
-                var result = await msGrpahProvider.DeleteMeetingInvite(this.TestTokenHeader, notificationId, eventId).ConfigureAwait(false);
+                var result = await msGrpahProvider.DeleteMeetingInvite(TestTokenHeader, notificationId, eventId).ConfigureAwait(false);
             }
             catch (Exception e)
             {
                 ex = e;
             }
 
-            Assert.IsTrue(ex?.Message?.Contains($"An error occurred while sending notification id: {notificationId}"));
+            Assert.IsTrue(ex?.Message?.Contains($"An error occurred while sending notification id: {notificationId}", StringComparison.Ordinal));
         }
 
         /// <summary>
@@ -520,7 +520,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
         {
             var eventId = Guid.NewGuid().ToString();
             var id = Guid.NewGuid().ToString();
-            HttpResponseMessage resp = this.GetHttpResponseMessage(HttpStatusCode.TooManyRequests, id);
+            HttpResponseMessage resp = GetHttpResponseMessage(HttpStatusCode.TooManyRequests, id);
             var handlerMock = new Mock<HttpMessageHandler>();
             _ = handlerMock
                .Protected()
@@ -532,7 +532,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
             var httpClient = new HttpClient(handlerMock.Object);
             var notificationId = Guid.NewGuid().ToString();
             var msGrpahProvider = new MSGraphProvider(this.MsGraphSetting, Options.Create(this.retrySetting), this.Logger, httpClient);
-            var result = await msGrpahProvider.DeleteMeetingInvite(this.TestTokenHeader, notificationId, eventId).ConfigureAwait(false);
+            var result = await msGrpahProvider.DeleteMeetingInvite(TestTokenHeader, notificationId, eventId).ConfigureAwait(false);
             Assert.AreEqual(result.StatusCode, HttpStatusCode.TooManyRequests);
         }
 
@@ -544,7 +544,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
         {
             var eventId = Guid.NewGuid().ToString();
             var id = Guid.NewGuid().ToString();
-            HttpResponseMessage resp = this.GetHttpResponseMessage(HttpStatusCode.Accepted, null);
+            HttpResponseMessage resp = GetHttpResponseMessage(HttpStatusCode.Accepted, null);
             var handlerMock = new Mock<HttpMessageHandler>();
             _ = handlerMock
                .Protected()
@@ -556,11 +556,11 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
             var httpClient = new HttpClient(handlerMock.Object);
             var notificationId = Guid.NewGuid().ToString();
             var msGrpahProvider = new MSGraphProvider(this.MsGraphSetting, Options.Create(this.retrySetting), this.Logger, httpClient);
-            var result = msGrpahProvider.SendMeetingInviteAttachments(this.TestTokenHeader, this.GetAttachments(), notificationId, eventId);
+            var result = msGrpahProvider.SendMeetingInviteAttachments(TestTokenHeader, GetAttachments(), notificationId, eventId);
             Assert.GreaterOrEqual(2, result.Count);
         }
 
-        private List<FileAttachment> GetAttachments()
+        private static List<FileAttachment> GetAttachments()
         {
             return new List<FileAttachment>()
             {
@@ -579,12 +579,12 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
             };
         }
 
-        private InvitePayload GetInvitePayload()
+        private static InvitePayload GetInvitePayload()
         {
             return new InvitePayload();
         }
 
-        private HttpResponseMessage GetHttpResponseMessage(HttpStatusCode httpStatusCode, string eventId)
+        private static HttpResponseMessage GetHttpResponseMessage(HttpStatusCode httpStatusCode, string eventId)
         {
             return new HttpResponseMessage(httpStatusCode)
             {
@@ -592,7 +592,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
             };
         }
 
-        private GraphBatchRequest GetGraphRequest()
+        private static GraphBatchRequest GetGraphRequest()
         {
             return new GraphBatchRequest
             {
@@ -612,7 +612,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
             };
         }
 
-        private HttpResponseMessage GetEmailResponseMessage(GraphBatchRequest request, string errorCode, string message, HttpStatusCode statusCode)
+        private static HttpResponseMessage GetEmailResponseMessage(GraphBatchRequest request, string errorCode, string message, HttpStatusCode statusCode)
         {
             var graphResponses = request.Requests.Select(e => new GraphResponse
             {

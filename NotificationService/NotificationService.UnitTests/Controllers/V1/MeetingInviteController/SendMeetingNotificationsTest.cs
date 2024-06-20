@@ -67,8 +67,8 @@ namespace NotificationService.UnitTests.Controllers.V1.MeetingInviteController
         {
             MeetingInviteController meetingInviteController = new MeetingInviteController(this.emailServiceManager.Object, this.logger);
 
-            _ = Assert.ThrowsAsync<ArgumentException>(async () => await meetingInviteController.SendMeetingInvites(null, this.meetingInvitesItem));
-            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await meetingInviteController.SendMeetingInvites(this.applicationName, null));
+            _ = Assert.ThrowsAsync<ArgumentException>(async () => await meetingInviteController.SendMeetingInvites(null, this.meetingInvitesItem).ConfigureAwait(false));
+            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await meetingInviteController.SendMeetingInvites(this.applicationName, null).ConfigureAwait(false));
         }
     }
 }

@@ -35,7 +35,7 @@ namespace NotificationService.FunctionalTests
             string notificationQueueEndpoint = $"{this.Configuration[FunctionalConstants.NotificationHandlerUrl]}/v1/email/queue/{this.Configuration[FunctionalConstants.Application]}";
             using (HttpClient httpClient = new HttpClient())
             {
-                string bearerToken = await this.tokenUtility.GetTokenAsync();
+                string bearerToken = await this.tokenUtility.GetTokenAsync().ConfigureAwait(false);
                 if (bearerToken != null)
                 {
                     httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(FunctionalConstants.Bearer, bearerToken);
@@ -44,7 +44,7 @@ namespace NotificationService.FunctionalTests
 
                     if (!response.IsSuccessStatusCode)
                     {
-                        var content = await response.Content.ReadAsStringAsync();
+                        var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                         Assert.Fail();
                     }
                     else
@@ -54,7 +54,7 @@ namespace NotificationService.FunctionalTests
                         var notificationResponse = notificationResponses.FirstOrDefault();
                         Assert.IsTrue(notificationResponse.Status == NotificationItemStatus.Queued);
                         var notificationId = notificationResponse.NotificationId;
-                        EmailMessage emailMessage = await GetNotificationMessageTest(notificationId, httpClient);
+                        EmailMessage emailMessage = await GetNotificationMessageTest(notificationId, httpClient).ConfigureAwait(false);
                         if (emailMessage != null)
                         {
                             Assert.IsTrue(emailNotificationItems[0].Subject == emailMessage.Subject);
@@ -71,7 +71,7 @@ namespace NotificationService.FunctionalTests
 
                         for (int i = 0; i < retryCount; i++)
                         {
-                            NotificationReportResponse notificationReportResponse = await GetNotificationReportTest(notificationId, httpClient);
+                            NotificationReportResponse notificationReportResponse = await GetNotificationReportTest(notificationId, httpClient).ConfigureAwait(false);
                             if (notificationReportResponse != null)
                             {
                                 NotificationItemStatus notificationItemStatus = Enum.TryParse<NotificationItemStatus>(notificationReportResponse.Status, out notificationItemStatus) ? notificationItemStatus : NotificationItemStatus.Queued;
@@ -98,7 +98,7 @@ namespace NotificationService.FunctionalTests
                                                 Assert.Fail();
                                                 break;
                                             }
-                                            await Task.Delay(delayTime);
+                                            await Task.Delay(delayTime).ConfigureAwait(false);
                                             continue;
                                         }
                                 }
@@ -136,7 +136,7 @@ namespace NotificationService.FunctionalTests
             var response = await httpClient.PostAsync(notificationReportEndpoint, stringContent).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
-                var content = await response.Content.ReadAsStringAsync();
+                var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 Assert.Fail();
             }
             else
@@ -161,7 +161,7 @@ namespace NotificationService.FunctionalTests
             var response = await httpClient.GetAsync(notificationMessageEndpoint).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
-                var content = await response.Content.ReadAsStringAsync();
+                var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             }
             else
             {
@@ -199,7 +199,7 @@ namespace NotificationService.FunctionalTests
             string notificationQueueEndpoint = $"{this.Configuration[FunctionalConstants.NotificationHandlerUrl]}/v1/email/queue/{this.Configuration[FunctionalConstants.Application]}";
             using (HttpClient httpClient = new HttpClient())
             {
-                string bearerToken = await this.tokenUtility.GetTokenAsync();
+                string bearerToken = await this.tokenUtility.GetTokenAsync().ConfigureAwait(false);
                 if (bearerToken != null)
                 {
                     httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(FunctionalConstants.Bearer, bearerToken);
@@ -208,7 +208,7 @@ namespace NotificationService.FunctionalTests
 
                     if (!response.IsSuccessStatusCode)
                     {
-                        var content = await response.Content.ReadAsStringAsync();
+                        var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                         Assert.Fail();
                     }
                     else
@@ -218,7 +218,7 @@ namespace NotificationService.FunctionalTests
                         var notificationResponse = notificationResponses.FirstOrDefault();
                         Assert.IsTrue(notificationResponse.Status == NotificationItemStatus.Queued);
                         var notificationId = notificationResponse.NotificationId;
-                        EmailMessage emailMessage = await GetNotificationMessageTest(notificationId, httpClient);
+                        EmailMessage emailMessage = await GetNotificationMessageTest(notificationId, httpClient).ConfigureAwait(false);
                         if (emailMessage != null)
                         {
                             Assert.IsTrue(emailNotificationItems[0].Subject == emailMessage.Subject);

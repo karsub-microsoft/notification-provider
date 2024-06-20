@@ -39,7 +39,7 @@ namespace NotificationService.FunctionalTests
             string templateSaveEndpoint = $"{this.Configuration[FunctionalConstants.NotificationHandlerUrl]}/v1/email/mailTemplate/{this.Configuration[FunctionalConstants.Application]}";
             using (HttpClient httpClient = new HttpClient())
             {
-                string bearerToken = await this.tokenUtility.GetTokenAsync();
+                string bearerToken = await this.tokenUtility.GetTokenAsync().ConfigureAwait(false);
                 if (bearerToken != null)
                 {
                     httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(FunctionalConstants.Bearer, bearerToken);
@@ -48,16 +48,16 @@ namespace NotificationService.FunctionalTests
 
                     if (!response.IsSuccessStatusCode)
                     {
-                        var content = await response.Content.ReadAsStringAsync();
+                        var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                         Assert.Fail();
                     }
                     else
                     {
                         var Result = response.Content.ReadAsStringAsync().Result;
                         Assert.IsTrue(Boolean.Parse(Result) == true);
-                        await SendEmailTemplateTest(mailTemplate, TemplateData);
-                        await SendMeetingInviteTemplateTest(mailTemplate, TemplateData);
-                        await DeleteTemplateTest(mailTemplate.TemplateId);
+                        await SendEmailTemplateTest(mailTemplate, TemplateData).ConfigureAwait(false);
+                        await SendMeetingInviteTemplateTest(mailTemplate, TemplateData).ConfigureAwait(false);
+                        await DeleteTemplateTest(mailTemplate.TemplateId).ConfigureAwait(false);
                     }
                 }
                 else
@@ -77,7 +77,7 @@ namespace NotificationService.FunctionalTests
             string templateDeleteEndpoint = $"{this.Configuration[FunctionalConstants.NotificationHandlerUrl]}/v1/email/deleteTemplate/{this.Configuration[FunctionalConstants.Application]}/{TemplateId}";
             using (HttpClient httpClient = new HttpClient())
             {
-                string bearerToken = await this.tokenUtility.GetTokenAsync();
+                string bearerToken = await this.tokenUtility.GetTokenAsync().ConfigureAwait(false);
                 if (bearerToken != null)
                 {
                     httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(FunctionalConstants.Bearer, bearerToken);
@@ -86,7 +86,7 @@ namespace NotificationService.FunctionalTests
 
                     if (!response.IsSuccessStatusCode)
                     {
-                        var content = await response.Content.ReadAsStringAsync();
+                        var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                         Assert.Fail();
                     }
                     else
@@ -124,7 +124,7 @@ namespace NotificationService.FunctionalTests
             string notificationServiceEndpoint = $"{this.Configuration[FunctionalConstants.NotificationServiceUrl]}/v1/email/send/{this.Configuration[FunctionalConstants.Application]}";
             using (HttpClient httpClient = new HttpClient())
             {
-                string bearerToken = await this.tokenUtility.GetTokenAsync();
+                string bearerToken = await this.tokenUtility.GetTokenAsync().ConfigureAwait(false);
                 if (bearerToken != null)
                 {
                     httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(FunctionalConstants.Bearer, bearerToken);
@@ -133,7 +133,7 @@ namespace NotificationService.FunctionalTests
 
                     if (!response.IsSuccessStatusCode)
                     {
-                        var content = await response.Content.ReadAsStringAsync();
+                        var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                         Assert.Fail();
                     }
                     else
@@ -142,7 +142,7 @@ namespace NotificationService.FunctionalTests
                         var notificationResponses = JsonConvert.DeserializeObject<List<NotificationResponse>>(Result);
                         var notificationResponse = notificationResponses.FirstOrDefault();
                         Assert.IsTrue(notificationResponse.Status == NotificationItemStatus.Sent);
-                        EmailMessage emailMessage = await GetEmailNotificationMessage(notificationResponse.NotificationId, httpClient);
+                        EmailMessage emailMessage = await GetEmailNotificationMessage(notificationResponse.NotificationId, httpClient).ConfigureAwait(false);
                         if (emailMessage != null)
                         {
                             var templateBody = ConvertText(mailTemplate.Content, TemplateData);
@@ -175,7 +175,7 @@ namespace NotificationService.FunctionalTests
             var response = await httpClient.GetAsync(notificationMessageEndpoint).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
-                var content = await response.Content.ReadAsStringAsync();
+                var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             }
             else
             {
@@ -191,7 +191,7 @@ namespace NotificationService.FunctionalTests
         /// <param name="notificationTemplate">notificationTemplate .</param>
         /// <param name="notificationText">notificationText .</param>
         /// <returns>text type template.</returns>
-        private string ConvertText(string notificationTemplate, string notificationText)
+        private static string ConvertText(string notificationTemplate, string notificationText)
         {
             if (string.IsNullOrEmpty(notificationText))
             {
@@ -238,7 +238,7 @@ namespace NotificationService.FunctionalTests
             string notificationServiceEndpoint = $"{this.Configuration[FunctionalConstants.NotificationServiceUrl]}/v1/meetinginvite/send/{this.Configuration[FunctionalConstants.Application]}";
             using (HttpClient httpClient = new HttpClient())
             {
-                string bearerToken = await this.tokenUtility.GetTokenAsync();
+                string bearerToken = await this.tokenUtility.GetTokenAsync().ConfigureAwait(false);
                 if (bearerToken != null)
                 {
                     httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(FunctionalConstants.Bearer, bearerToken);
@@ -247,7 +247,7 @@ namespace NotificationService.FunctionalTests
 
                     if (!response.IsSuccessStatusCode)
                     {
-                        var content = await response.Content.ReadAsStringAsync();
+                        var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                         Assert.Fail();
                     }
                     else
@@ -256,7 +256,7 @@ namespace NotificationService.FunctionalTests
                         var notificationResponses = JsonConvert.DeserializeObject<List<NotificationResponse>>(Result);
                         var notificationResponse = notificationResponses.FirstOrDefault();
                         Assert.IsTrue(notificationResponse.Status == NotificationItemStatus.Sent);
-                        MeetingInviteMessage inviteMessage = await GetMeetingNotificationMessage(notificationResponse.NotificationId, httpClient);
+                        MeetingInviteMessage inviteMessage = await GetMeetingNotificationMessage(notificationResponse.NotificationId, httpClient).ConfigureAwait(false);
                         if (inviteMessage != null)
                         {
                             var templateBody = ConvertText(mailTemplate.Content, TemplateData);
@@ -289,7 +289,7 @@ namespace NotificationService.FunctionalTests
             var response = await httpClient.GetAsync(notificationMessageEndpoint).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
-                var content = await response.Content.ReadAsStringAsync();
+                var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             }
             else
             {

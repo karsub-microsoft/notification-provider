@@ -63,8 +63,8 @@ namespace NotificationService.UnitTests.Controllers.V1.MeetingInviteController
             MeetingInviteController meetingInviteController = new MeetingInviteController(this.emailServiceManager.Object, this.logger);
             QueueNotificationItem queueNotificationItem = new QueueNotificationItem { NotificationIds = new string[] { Guid.NewGuid().ToString() } };
 
-            _ = Assert.ThrowsAsync<ArgumentException>(async () => await meetingInviteController.ProcessQueuedMeetingNotifications(null, queueNotificationItem));
-            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await meetingInviteController.ProcessQueuedMeetingNotifications("TestApp", null));
+            _ = Assert.ThrowsAsync<ArgumentException>(async () => await meetingInviteController.ProcessQueuedMeetingNotifications(null, queueNotificationItem).ConfigureAwait(false));
+            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await meetingInviteController.ProcessQueuedMeetingNotifications("TestApp", null).ConfigureAwait(false));
         }
     }
 }

@@ -66,8 +66,8 @@ namespace NotificationService.UnitTests.Controllers.V1.EmailController
         {
             EmailController emailController = new EmailController(this.emailServiceManager.Object, this.logger);
 
-            _ = Assert.ThrowsAsync<ArgumentException>(async () => await emailController.SendEmailNotifications(null, this.emailNotificationItems));
-            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await emailController.SendEmailNotifications(this.applicationName, null));
+            _ = Assert.ThrowsAsync<ArgumentException>(async () => await emailController.SendEmailNotifications(null, this.emailNotificationItems).ConfigureAwait(false));
+            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await emailController.SendEmailNotifications(this.applicationName, null).ConfigureAwait(false));
         }
     }
 }

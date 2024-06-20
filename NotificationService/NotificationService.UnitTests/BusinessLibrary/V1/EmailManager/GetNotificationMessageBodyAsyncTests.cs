@@ -30,7 +30,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.V1.EmailManager
             var notificationId = Guid.NewGuid().ToString();
             EmailNotificationItemEntity notificationItemEntity = new EmailNotificationItemEntity()
             {
-                Application = this.ApplicationName,
+                Application = ApplicationName,
                 NotificationId = notificationId,
                 To = "user@contoso.com",
                 Subject = "TestEmailSubject",
@@ -40,7 +40,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.V1.EmailManager
             };
             string mergedTemplate = "Testing Html template";
 
-            var result = this.EmailManager.GetNotificationMessageBodyAsync(this.ApplicationName, notificationItemEntity);
+            var result = this.EmailManager.GetNotificationMessageBodyAsync(ApplicationName, notificationItemEntity);
             Assert.AreEqual(result.Status.ToString(), "RanToCompletion");
             Assert.AreEqual(result.Result.Content, mergedTemplate);
 
@@ -58,7 +58,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.V1.EmailManager
             var notificationId = Guid.NewGuid().ToString();
             EmailNotificationItemEntity notificationItemEntity = new EmailNotificationItemEntity()
             {
-                Application = this.ApplicationName,
+                Application = ApplicationName,
                 NotificationId = notificationId,
                 To = "user@contoso.com",
                 Subject = "TestEmailSubject",
@@ -67,8 +67,8 @@ namespace NotificationService.UnitTests.BusinessLibrary.V1.EmailManager
                 Id = notificationId,
             };
 
-            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await this.EmailManager.GetNotificationMessageBodyAsync(this.ApplicationName, (EmailNotificationItemEntity)null));
-            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await this.EmailManager.GetNotificationMessageBodyAsync(null, notificationItemEntity));
+            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await this.EmailManager.GetNotificationMessageBodyAsync(ApplicationName, (EmailNotificationItemEntity)null).ConfigureAwait(false));
+            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await this.EmailManager.GetNotificationMessageBodyAsync(null, notificationItemEntity).ConfigureAwait(false));
         }
     }
 }

@@ -48,10 +48,10 @@ namespace NotificationService.UnitTests.BusinessLibrary.V1.NotifiationReportMana
             var emailRepository = new Mock<IEmailNotificationRepository>();
             _ = this.repositoryFactory.Setup(c => c.GetRepository(It.IsAny<StorageType>())).Returns(emailRepository.Object);
             _ = emailRepository.Setup(c => c.GetMeetingNotificationItemEntity(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(meetingItemEntity);
-            _ = this.templateManager.Setup(c => c.GetMailTemplate(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(this.GetMailTemplate());
+            _ = this.templateManager.Setup(c => c.GetMailTemplate(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(GetMailTemplate());
             _ = this.templateMerge.Setup(c => c.CreateMailBodyUsingTemplate(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).Returns("Test Message Body.");
             this.classUnderTest = new NotificationReportManager(this.logger.Object, this.repositoryFactory.Object, this.configuration, this.mailTemplateRepository.Object, this.templateManager.Object, this.templateMerge.Object);
-            var result = await this.classUnderTest.GetMeetingNotificationMessage(this.ApplicationName, notifiationId);
+            var result = await this.classUnderTest.GetMeetingNotificationMessage(this.ApplicationName, notifiationId).ConfigureAwait(false);
             emailRepository.Verify(c => c.GetMeetingNotificationItemEntity(notifiationId, this.ApplicationName), Times.Once);
             Assert.AreEqual(meetingItemEntity.NotificationId, result.NotificationId);
         }
@@ -72,7 +72,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.V1.NotifiationReportMana
             this.classUnderTest = new NotificationReportManager(this.logger.Object, this.repositoryFactory.Object, this.configuration, this.mailTemplateRepository.Object, this.templateManager.Object, this.templateMerge.Object);
             try
             {
-                var result = await this.classUnderTest.GetMeetingNotificationMessage(this.ApplicationName, notifiationId);
+                var result = await this.classUnderTest.GetMeetingNotificationMessage(this.ApplicationName, notifiationId).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -80,7 +80,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.V1.NotifiationReportMana
             }
         }
 
-        private MailTemplate GetMailTemplate()
+        private static MailTemplate GetMailTemplate()
         {
             return new MailTemplate()
             {

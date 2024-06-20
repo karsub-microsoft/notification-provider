@@ -126,7 +126,9 @@ namespace NotificationService.BusinessLibrary.Business.V1
                     this.logger.TraceVerbose($"Completed {nameof(BusinessUtilities.GetCloudMessagesForEntities)} method of {nameof(EmailHandlerManager)}.", traceProps);
 
                     this.logger.TraceVerbose($"Started {nameof(this.cloudStorageClient.QueueCloudMessages)} method of {nameof(EmailHandlerManager)}.", traceProps);
-                    await this.cloudStorageClient.QueueCloudMessages(cloudQueue, cloudMessages).ConfigureAwait(false);
+                    //await this.cloudStorageClient.QueueCloudMessages(cloudQueue, cloudMessages).ConfigureAwait(false);
+
+                    await this.cloudStorageClient.QueueCloudMessages(cloudMessages).ConfigureAwait(false);
                     this.logger.TraceVerbose($"Completed {nameof(this.cloudStorageClient.QueueCloudMessages)} method of {nameof(EmailHandlerManager)}.", traceProps);
                 }
 
@@ -206,7 +208,7 @@ namespace NotificationService.BusinessLibrary.Business.V1
                     this.logger.TraceVerbose($"Completed {nameof(BusinessUtilities.GetCloudMessagesForEntities)} method of {nameof(EmailHandlerManager)}.", traceProps);
 
                     this.logger.TraceVerbose($"Started {nameof(this.cloudStorageClient.QueueCloudMessages)} method of {nameof(EmailHandlerManager)}.", traceProps);
-                    await this.cloudStorageClient.QueueCloudMessages(cloudQueue, cloudMessages).ConfigureAwait(false);
+                    await this.cloudStorageClient.QueueCloudMessages(cloudMessages).ConfigureAwait(false);
                     this.logger.TraceVerbose($"Completed {nameof(this.cloudStorageClient.QueueCloudMessages)} method of {nameof(EmailHandlerManager)}.", traceProps);
                 }
 
@@ -250,7 +252,7 @@ namespace NotificationService.BusinessLibrary.Business.V1
             // Queue a single cloud message for all entities created to enable parallel processing.
             var cloudQueue = this.cloudStorageClient.GetCloudQueue(this.notificationQueue);
             IList<string> cloudMessages = BusinessUtilities.GetCloudMessagesForIds(applicationName, notificationIds, notifType, ignoreAlreadySent);
-            await this.cloudStorageClient.QueueCloudMessages(cloudQueue, cloudMessages).ConfigureAwait(false);
+            await this.cloudStorageClient.QueueCloudMessages(cloudMessages).ConfigureAwait(false);
 
             notificationIds.ToList().ForEach(id =>
             {

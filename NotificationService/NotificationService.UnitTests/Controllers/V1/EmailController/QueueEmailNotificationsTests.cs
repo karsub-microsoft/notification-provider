@@ -76,8 +76,8 @@ namespace NotificationService.UnitTests.Controllers.V1.EmailController
         {
             EmailController emailController = new EmailController(this.emailHandlerManager.Object, this.mailTemplateManager.Object, this.logger);
 
-            _ = Assert.ThrowsAsync<ArgumentException>(async () => await emailController.QueueEmailNotifications(null, this.emailNotificationItems));
-            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await emailController.QueueEmailNotifications(this.applicationName, null));
+            _ = Assert.ThrowsAsync<ArgumentException>(async () => await emailController.QueueEmailNotifications(null, this.emailNotificationItems).ConfigureAwait(false));
+            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await emailController.QueueEmailNotifications(this.applicationName, null).ConfigureAwait(false));
         }
 
         /// <summary>
@@ -90,7 +90,7 @@ namespace NotificationService.UnitTests.Controllers.V1.EmailController
             _ = this.emailHandlerManager.Setup(x => x.QueueMeetingNotifications(It.IsAny<string>(), It.IsAny<MeetingNotificationItem[]>())).ReturnsAsync(new List<NotificationResponse> { new NotificationResponse { NotificationId = "NotificationId" } });
             MeetingInviteController meetinginviteController = new MeetingInviteController(this.emailHandlerManager.Object, this.logger);
             IList<NotificationResponse> responses = new List<NotificationResponse>();
-            var result = await meetinginviteController.QueueMeetingNotifications(this.applicationName, this.meetingNotificationItems);
+            var result = await meetinginviteController.QueueMeetingNotifications(this.applicationName, this.meetingNotificationItems).ConfigureAwait(false);
             Assert.NotNull(result);
             var res = result as AcceptedResult;
             var items = res.Value as List<NotificationResponse>;

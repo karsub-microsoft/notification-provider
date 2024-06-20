@@ -71,8 +71,8 @@ namespace NotificationService.UnitTests.Controllers.V1.EmailController
         {
             EmailController emailController = new EmailController(this.emailHandlerManager.Object, this.mailTemplateManager.Object, this.logger);
 
-            _ = Assert.ThrowsAsync<ArgumentException>(async () => await emailController.ResendEmailNotifications(null, this.notificationIds));
-            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await emailController.ResendEmailNotifications(this.applicationName, null));
+            _ = Assert.ThrowsAsync<ArgumentException>(async () => await emailController.ResendEmailNotifications(null, this.notificationIds).ConfigureAwait(false));
+            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await emailController.ResendEmailNotifications(this.applicationName, null).ConfigureAwait(false));
         }
 
         /// <summary>
@@ -94,7 +94,7 @@ namespace NotificationService.UnitTests.Controllers.V1.EmailController
                 .Setup(emailHandlerManager => emailHandlerManager.ResendEmailNotificationsByDateRange(It.IsAny<string>(), It.IsAny<DateTimeRange>()))
                 .Returns(Task.FromResult(responses));
 
-            var result = await emailController.ResendEmailNotificationsByDateRange(this.applicationName, dateRange);
+            var result = await emailController.ResendEmailNotificationsByDateRange(this.applicationName, dateRange).ConfigureAwait(false);
             var res = (AcceptedResult)result;
             Assert.IsNotNull(res.Value);
             Assert.IsTrue(((List<NotificationResponse>)res.Value).Count == 1);
@@ -119,14 +119,14 @@ namespace NotificationService.UnitTests.Controllers.V1.EmailController
                 .Setup(emailHandlerManager => emailHandlerManager.ResendEmailNotificationsByDateRange(It.IsAny<string>(), It.IsAny<DateTimeRange>()))
                 .Returns(Task.FromResult(responses));
 
-            var result = await emailController.ResendEmailNotificationsByDateRange(this.applicationName, dateRange);
+            var result = await emailController.ResendEmailNotificationsByDateRange(this.applicationName, dateRange).ConfigureAwait(false);
             var res = (AcceptedResult)result;
             Assert.IsNotNull(res.Value);
             responses = null;
             _ = this.emailHandlerManager
                .Setup(emailHandlerManager => emailHandlerManager.ResendEmailNotificationsByDateRange(It.IsAny<string>(), It.IsAny<DateTimeRange>()))
                .Returns(Task.FromResult(responses));
-            result = await emailController.ResendEmailNotificationsByDateRange(this.applicationName, dateRange);
+            result = await emailController.ResendEmailNotificationsByDateRange(this.applicationName, dateRange).ConfigureAwait(false);
             res = (AcceptedResult)result;
             Assert.IsNull(res.Value);
         }
@@ -138,8 +138,8 @@ namespace NotificationService.UnitTests.Controllers.V1.EmailController
         public void ResendEmailNotificationsByDateRangeTest_InvalidInput()
         {
             EmailController emailController = new EmailController(this.emailHandlerManager.Object, this.mailTemplateManager.Object, this.logger);
-            _ = Assert.ThrowsAsync<ArgumentException>(async () => await emailController.ResendEmailNotificationsByDateRange(null, null));
-            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await emailController.ResendEmailNotificationsByDateRange(this.applicationName, null));
+            _ = Assert.ThrowsAsync<ArgumentException>(async () => await emailController.ResendEmailNotificationsByDateRange(null, null).ConfigureAwait(false));
+            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await emailController.ResendEmailNotificationsByDateRange(this.applicationName, null).ConfigureAwait(false));
         }
     }
 }

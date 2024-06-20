@@ -134,7 +134,7 @@ namespace NotificationService.UnitTests.Controllers.V1.MeetingInviteController
                 .Setup(emailHandlerManager => emailHandlerManager.ResendMeetingNotificationsByDateRange(It.IsAny<string>(), It.IsAny<DateTimeRange>()))
                 .Returns(Task.FromResult(responses));
 
-            var result = await classUnderTest.ResendMeetingNotificationsByDateRange(this.applicationName, dateRange);
+            var result = await classUnderTest.ResendMeetingNotificationsByDateRange(this.applicationName, dateRange).ConfigureAwait(false);
             var res = (AcceptedResult)result;
             Assert.IsNotNull(res.Value);
             Assert.IsTrue(((List<NotificationResponse>)res.Value).Count == 1);
@@ -159,14 +159,14 @@ namespace NotificationService.UnitTests.Controllers.V1.MeetingInviteController
                 .Setup(emailHandlerManager => emailHandlerManager.ResendMeetingNotificationsByDateRange(It.IsAny<string>(), It.IsAny<DateTimeRange>()))
                 .Returns(Task.FromResult(responses));
 
-            var result = await classUnderTest.ResendMeetingNotificationsByDateRange(this.applicationName, dateRange);
+            var result = await classUnderTest.ResendMeetingNotificationsByDateRange(this.applicationName, dateRange).ConfigureAwait(false);
             var res = (AcceptedResult)result;
             Assert.IsNotNull(res.Value);
             responses = null;
             _ = this.emailHandlerManager
                .Setup(emailHandlerManager => emailHandlerManager.ResendMeetingNotificationsByDateRange(It.IsAny<string>(), It.IsAny<DateTimeRange>()))
                .Returns(Task.FromResult(responses));
-            result = await classUnderTest.ResendMeetingNotificationsByDateRange(this.applicationName, dateRange);
+            result = await classUnderTest.ResendMeetingNotificationsByDateRange(this.applicationName, dateRange).ConfigureAwait(false);
             res = (AcceptedResult)result;
             Assert.IsNull(res.Value);
         }
@@ -178,8 +178,8 @@ namespace NotificationService.UnitTests.Controllers.V1.MeetingInviteController
         public void ResendMeetingNotificationsByDateRangeTest_InvalidInput()
         {
             MeetingInviteController classUnderTest = new MeetingInviteController(this.emailHandlerManager.Object, this.logger.Object);
-            _ = Assert.ThrowsAsync<ArgumentException>(async () => await classUnderTest.ResendMeetingNotificationsByDateRange(null, null));
-            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await classUnderTest.ResendMeetingNotificationsByDateRange(this.applicationName, null));
+            _ = Assert.ThrowsAsync<ArgumentException>(async () => await classUnderTest.ResendMeetingNotificationsByDateRange(null, null).ConfigureAwait(false));
+            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await classUnderTest.ResendMeetingNotificationsByDateRange(this.applicationName, null).ConfigureAwait(false));
         }
     }
 }

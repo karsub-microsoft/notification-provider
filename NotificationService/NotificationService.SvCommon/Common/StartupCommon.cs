@@ -135,6 +135,8 @@ namespace NotificationService.SvCommon.Common
 
             _ = services.Configure<StorageAccountSetting>(this.Configuration.GetSection(ConfigConstants.StorageAccountConfigSectionKey));
             _ = services.Configure<StorageAccountSetting>(s => s.ConnectionString = this.Configuration[ConfigConstants.StorageAccountConnectionStringConfigKey]);
+            _ = services.Configure<StorageAccountSetting>(s => s.QueueConnectionName = "https://emailstgppeeusstorage.queue.core.windows.net/aktest");
+            _ = services.Configure<StorageAccountSetting>(s => s.BlobConnectionName = "https://emailstgppeeusstorage.blob.core.windows.net/email-blobs");
             _ = services.Configure<UserTokenSetting>(this.Configuration.GetSection(ConfigConstants.UserTokenSettingConfigSectionKey));
             _ = services.Configure<RetrySetting>(this.Configuration.GetSection(ConfigConstants.RetrySettingConfigSectionKey));
 

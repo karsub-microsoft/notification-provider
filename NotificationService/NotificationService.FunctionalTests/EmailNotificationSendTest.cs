@@ -33,7 +33,7 @@ namespace NotificationService.FunctionalTests
             string notificationServiceEndpoint = $"{this.Configuration[FunctionalConstants.NotificationServiceUrl]}/v1/email/send/{this.Configuration[FunctionalConstants.Application]}";
             using (HttpClient httpClient = new HttpClient())
             {
-                string bearerToken = await this.tokenUtility.GetTokenAsync();
+                string bearerToken = await this.tokenUtility.GetTokenAsync().ConfigureAwait(false);
                 if (bearerToken != null)
                 {
                     httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(FunctionalConstants.Bearer, bearerToken);
@@ -42,7 +42,7 @@ namespace NotificationService.FunctionalTests
 
                     if (!response.IsSuccessStatusCode)
                     {
-                        var content = await response.Content.ReadAsStringAsync();
+                        var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                         Assert.Fail();
                     }
                     else

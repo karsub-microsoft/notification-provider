@@ -58,7 +58,12 @@ namespace NotificationService.BusinessLibrary
                     NotificationType = NotificationType.Mail,
                     IgnoreAlreadySent = ignoreAlreadySent,
                 };
-                cloudMessages.Add(JsonConvert.SerializeObject(cloudMessage));
+
+
+                var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(cloudMessage));
+                cloudMessages.Add(System.Convert.ToBase64String(plainTextBytes));
+
+                //cloudMessages.Add(JsonConvert.SerializeObject(cloudMessage));
             }
 
             return cloudMessages;

@@ -43,7 +43,7 @@ namespace NotificationService.UnitTests.Data.Repositories
         [Test]
         public void CreateMeetingNotificationItemEntitiesTestInvalidInput()
         {
-            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await this.EmailNotificationRepository.CreateMeetingNotificationItemEntities(null));
+            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await this.EmailNotificationRepository.CreateMeetingNotificationItemEntities(null).ConfigureAwait(false));
         }
 
         /// <summary>
@@ -52,9 +52,9 @@ namespace NotificationService.UnitTests.Data.Repositories
         [Test]
         public void CreateMeetingNotificationItemEntitiesTestValidInput()
         {
-            var result = this.EmailNotificationRepository.CreateMeetingNotificationItemEntities(this.meetingNotificationEntities);
+            var result = this.EmailNotificationRepository.CreateMeetingNotificationItemEntities(meetingNotificationEntities);
             Assert.AreEqual(result.Status.ToString(), "RanToCompletion");
-            this.CosmosDBQueryClient.Verify(cdq => cdq.GetCosmosContainer(It.IsAny<string>(), this.MeetingHistoryContainerName), Times.Once);
+            this.CosmosDBQueryClient.Verify(cdq => cdq.GetCosmosContainer(It.IsAny<string>(), MeetingHistoryContainerName), Times.Once);
             this.MeetingHistoryContainer.Verify(container => container.CreateItemAsync(It.IsAny<MeetingNotificationItemCosmosDbEntity>(), null, null, It.IsAny<CancellationToken>()), Times.Exactly(2));
             Assert.Pass();
         }
@@ -65,7 +65,7 @@ namespace NotificationService.UnitTests.Data.Repositories
         [Test]
         public void UpdateMeetingNotificationItemEntitiesTestInvalidInput()
         {
-            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await this.EmailNotificationRepository.UpdateMeetingNotificationItemEntities(null));
+            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await this.EmailNotificationRepository.UpdateMeetingNotificationItemEntities(null).ConfigureAwait(false));
         }
 
         /// <summary>
@@ -74,9 +74,9 @@ namespace NotificationService.UnitTests.Data.Repositories
         [Test]
         public void UpdateMeetingNotificationItemEntitiesTestValidInput()
         {
-            var result = this.EmailNotificationRepository.UpdateMeetingNotificationItemEntities(this.meetingNotificationEntities);
+            var result = this.EmailNotificationRepository.UpdateMeetingNotificationItemEntities(meetingNotificationEntities);
             Assert.AreEqual(result.Status.ToString(), "RanToCompletion");
-            this.CosmosDBQueryClient.Verify(cdq => cdq.GetCosmosContainer(It.IsAny<string>(), this.MeetingHistoryContainerName), Times.Once);
+            this.CosmosDBQueryClient.Verify(cdq => cdq.GetCosmosContainer(It.IsAny<string>(), MeetingHistoryContainerName), Times.Once);
             this.MeetingHistoryContainer.Verify(container => container.UpsertItemAsync(It.IsAny<MeetingNotificationItemCosmosDbEntity>(), null, null, It.IsAny<CancellationToken>()), Times.Exactly(2));
             Assert.Pass();
         }
@@ -87,7 +87,7 @@ namespace NotificationService.UnitTests.Data.Repositories
         [Test]
         public void GetMeetingNotificationItemEntitiesTestInvalidInput()
         {
-            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await this.EmailNotificationRepository.GetMeetingNotificationItemEntities(null));
+            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await this.EmailNotificationRepository.GetMeetingNotificationItemEntities(null).ConfigureAwait(false));
         }
 
         /// <summary>
@@ -98,7 +98,7 @@ namespace NotificationService.UnitTests.Data.Repositories
         {
             var result = this.EmailNotificationRepository.GetMeetingNotificationItemEntities(new List<string>() { Guid.NewGuid().ToString() });
             Assert.AreEqual(result.Status.ToString(), "RanToCompletion");
-            this.CosmosDBQueryClient.Verify(cdq => cdq.GetCosmosContainer(It.IsAny<string>(), this.MeetingHistoryContainerName), Times.Once);
+            this.CosmosDBQueryClient.Verify(cdq => cdq.GetCosmosContainer(It.IsAny<string>(), MeetingHistoryContainerName), Times.Once);
             this.MeetingHistoryContainer.Verify(container => container.GetItemLinqQueryable<MeetingNotificationItemCosmosDbEntity>(It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<QueryRequestOptions>()), Times.Once);
             Assert.Pass();
         }
@@ -109,7 +109,7 @@ namespace NotificationService.UnitTests.Data.Repositories
         [Test]
         public void GetMeetingNotificationItemEntityTestInvalidInput()
         {
-            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await this.EmailNotificationRepository.GetMeetingNotificationItemEntity(null));
+            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await this.EmailNotificationRepository.GetMeetingNotificationItemEntity(null).ConfigureAwait(false));
         }
 
         /// <summary>
@@ -119,7 +119,7 @@ namespace NotificationService.UnitTests.Data.Repositories
         public void GetMeetingNotificationItemEntityTestValidInput()
         {
             var result = this.EmailNotificationRepository.GetMeetingNotificationItemEntity(Guid.NewGuid().ToString());
-            this.CosmosDBQueryClient.Verify(cdq => cdq.GetCosmosContainer(It.IsAny<string>(), this.MeetingHistoryContainerName), Times.Once);
+            this.CosmosDBQueryClient.Verify(cdq => cdq.GetCosmosContainer(It.IsAny<string>(), MeetingHistoryContainerName), Times.Once);
             this.MeetingHistoryContainer.Verify(container => container.GetItemLinqQueryable<MeetingNotificationItemCosmosDbEntity>(It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<QueryRequestOptions>()), Times.Once);
             Assert.Pass();
         }
@@ -150,7 +150,7 @@ namespace NotificationService.UnitTests.Data.Repositories
             var result = this.EmailNotificationRepository.GetMeetingInviteNotifications(request);
             Assert.AreEqual(result.Status.ToString(), "RanToCompletion");
 
-            this.CosmosDBQueryClient.Verify(cdq => cdq.GetCosmosContainer(It.IsAny<string>(), this.MeetingHistoryContainerName), Times.Once);
+            this.CosmosDBQueryClient.Verify(cdq => cdq.GetCosmosContainer(It.IsAny<string>(), MeetingHistoryContainerName), Times.Once);
             this.MeetingHistoryContainer.Verify(container => container.GetItemLinqQueryable<MeetingNotificationItemCosmosDbEntity>(It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<QueryRequestOptions>()), Times.Once);
             Assert.Pass();
         }
@@ -165,22 +165,22 @@ namespace NotificationService.UnitTests.Data.Repositories
             var statusList = new List<NotificationItemStatus>() { NotificationItemStatus.Failed };
             var application = "TestApp";
 
-            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await this.EmailNotificationRepository.GetPendingOrFailedMeetingNotificationsByDateRange(null, application, statusList));
+            _ = Assert.ThrowsAsync<ArgumentNullException>(async () => await this.EmailNotificationRepository.GetPendingOrFailedMeetingNotificationsByDateRange(null, application, statusList).ConfigureAwait(false));
 
             Expression<Func<MeetingNotificationItemCosmosDbEntity, bool>> filterExpression = n => true;
             Expression<Func<MeetingNotificationItemCosmosDbEntity, DateTime>> sortExpression = n => n.CreatedDateTime;
             Expression<Func<MeetingNotificationItemCosmosDbEntity, MeetingNotificationItemCosmosDbEntity>> selectExpression = n => new MeetingNotificationItemCosmosDbEntity() { NotificationId = n.NotificationId };
 
-            var result = await this.EmailNotificationRepository.GetPendingOrFailedMeetingNotificationsByDateRange(this.dateRange, null, statusList);
+            var result = await this.EmailNotificationRepository.GetPendingOrFailedMeetingNotificationsByDateRange(this.dateRange, null, statusList).ConfigureAwait(false);
             Assert.IsNotNull(result);
 
-            var faultedResult = await this.EmailNotificationRepository.GetPendingOrFailedMeetingNotificationsByDateRange(this.dateRange, application, null);
+            var faultedResult = await this.EmailNotificationRepository.GetPendingOrFailedMeetingNotificationsByDateRange(this.dateRange, application, null).ConfigureAwait(false);
             Assert.IsNotNull(result);
 
-            result = await this.EmailNotificationRepository.GetPendingOrFailedMeetingNotificationsByDateRange(this.dateRange, application, statusList);
+            result = await this.EmailNotificationRepository.GetPendingOrFailedMeetingNotificationsByDateRange(this.dateRange, application, statusList).ConfigureAwait(false);
             Assert.IsNotNull(result);
 
-            this.CosmosDBQueryClient.Verify(cdq => cdq.GetCosmosContainer(It.IsAny<string>(), this.MeetingHistoryContainerName), Times.Once);
+            this.CosmosDBQueryClient.Verify(cdq => cdq.GetCosmosContainer(It.IsAny<string>(), MeetingHistoryContainerName), Times.Once);
             this.MeetingHistoryContainer.Verify(container => container.GetItemLinqQueryable<MeetingNotificationItemCosmosDbEntity>(It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<QueryRequestOptions>()), Times.Exactly(3));
             Assert.Pass();
 

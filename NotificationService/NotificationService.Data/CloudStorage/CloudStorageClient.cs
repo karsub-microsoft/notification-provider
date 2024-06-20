@@ -8,9 +8,9 @@ namespace NotificationService.Data
     using System.IO;
     using System.Linq;
     using System.Threading.Tasks;
+    using Azure.Identity;
     using Azure.Storage.Blobs;
-    using Microsoft.Azure.Storage;
-    using Microsoft.Azure.Storage.Queue;
+    using Azure.Storage.Queues;
     using Microsoft.Extensions.Options;
     using NotificationService.Common;
     using NotificationService.Common.Logger;
@@ -26,14 +26,9 @@ namespace NotificationService.Data
         private readonly StorageAccountSetting storageAccountSetting;
 
         /// <summary>
-        /// Instance of <see cref="CloudStorageAccount"/>.
+        /// Instance of <see cref="QueueClient"/>.
         /// </summary>
-        private readonly CloudStorageAccount cloudStorageAccount;
-
-        /// <summary>
-        /// Instance of <see cref="CloudQueueClient"/>.
-        /// </summary>
-        private readonly CloudQueueClient cloudQueueClient;
+        private readonly QueueClient cloudQueueClient;
 
         /// <summary>
         /// Instance of <see cref="BlobContainerClient"/>.
@@ -54,34 +49,42 @@ namespace NotificationService.Data
         {
             this.storageAccountSetting = storageAccountSetting?.Value;
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            this.cloudStorageAccount = CloudStorageAccount.Parse(this.storageAccountSetting.ConnectionString);
-            this.cloudQueueClient = this.cloudStorageAccount.CreateCloudQueueClient();
-            this.blobContainerClient = new BlobContainerClient(this.storageAccountSetting.ConnectionString, this.storageAccountSetting.BlobContainerName);
+            //this.cloudStorageAccount = CloudStorageAccount.Parse(this.storageAccountSetting.ConnectionString);
+            //this.cloudQueueClient = this.cloudStorageAccount.CreateCloudQueueClient();
+
+            this.cloudQueueClient = new QueueClient(new Uri(this.storageAccountSetting.QueueConnectionName), new DefaultAzureCredential());
+
+            this.blobContainerClient = new BlobContainerClient(new Uri(this.storageAccountSetting.BlobConnectionName), new DefaultAzureCredential());
             if (!this.blobContainerClient.Exists())
             {
-                this.logger.TraceWarning($"BlobStorageClient - Method: {nameof(CloudStorageClient)} - No container found with name {this.storageAccountSetting.BlobContainerName}.");
+                this.logger.TraceWarning($"BlobStorageClient - Method: {nameof(QueueClient)} - No container found with name {this.storageAccountSetting.BlobContainerName}.");
 
                 var response = this.blobContainerClient.CreateIfNotExists();
 
-                this.blobContainerClient = new BlobContainerClient(this.storageAccountSetting.ConnectionString, this.storageAccountSetting.BlobContainerName);
+                this.blobContainerClient = new BlobContainerClient(new Uri(this.storageAccountSetting.BlobContainerName), new DefaultAzureCredential());
             }
         }
 
         /// <inheritdoc/>
-        public CloudQueue GetCloudQueue(string queueName)
+        public QueueClient GetCloudQueue(string queueName)
         {
-            CloudQueue cloudQueue = this.cloudQueueClient.GetQueueReference(queueName);
-            _ = cloudQueue.CreateIfNotExists();
-            return cloudQueue;
+            //CloudQueue cloudQueue = this.cloudQueueClient.GetQueueReference(queueName);
+            //_ = cloudQueue.CreateIfNotExists();
+            //return cloudQueue;
+
+            _ = this.cloudQueueClient.CreateIfNotExists();
+            return this.cloudQueueClient;
         }
 
         /// <inheritdoc/>
-        public Task QueueCloudMessages(CloudQueue cloudQueue, IEnumerable<string> messages, TimeSpan? initialVisibilityDelay = null)
+        public Task QueueCloudMessages(IEnumerable<string> messages, TimeSpan? initialVisibilityDelay = null)
         {
             messages.ToList().ForEach(msg =>
             {
-                CloudQueueMessage message = new CloudQueueMessage(msg);
-                cloudQueue.AddMessage(message, null, initialVisibilityDelay);
+                //CloudQueueMessage message = new CloudQueueMessage(msg);
+                //cloudQueue.AddMessage(message, null, initialVisibilityDelay);
+
+                _ = this.cloudQueueClient.SendMessage(msg);
             });
             return Task.CompletedTask;
         }

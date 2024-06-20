@@ -23,7 +23,7 @@ namespace NotificationService.UnitTests.BusinessLibrary.Providers
         /// <summary>
         /// Gets Test Application name.
         /// </summary>
-        public string ApplicationName => "TestApp";
+        public static string ApplicationName => "TestApp";
 
         /// <summary>
         /// Gets or sets MSGraphSetting Configuration Mock.

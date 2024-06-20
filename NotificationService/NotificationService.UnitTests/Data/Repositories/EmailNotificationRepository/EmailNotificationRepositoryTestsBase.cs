@@ -67,7 +67,7 @@ namespace NotificationService.UnitTests.Data.Repositories
         /// <summary>
         /// Gets Test Application name.
         /// </summary>
-        public string ApplicationName
+        public static string ApplicationName
         {
             get => "TestApp";
         }
@@ -75,13 +75,13 @@ namespace NotificationService.UnitTests.Data.Repositories
         /// <summary>
         /// Gets test notification entities.
         /// </summary>
-        public IList<EmailNotificationItemEntity> NotificationEntities
+        public static IList<EmailNotificationItemEntity> NotificationEntities
         {
             get => new List<EmailNotificationItemEntity>()
             {
                 new EmailNotificationItemEntity()
                 {
-                    Application = this.ApplicationName,
+                    Application = ApplicationName,
                     Id = "TestId",
                     To = "user@contoso.com",
                     Subject = "TestSubject",
@@ -89,7 +89,7 @@ namespace NotificationService.UnitTests.Data.Repositories
                 },
                 new EmailNotificationItemEntity()
                 {
-                    Application = this.ApplicationName,
+                    Application = ApplicationName,
                     Id = "TestId2",
                     To = "user@contoso.com",
                     Subject = "TestSubject",
@@ -101,13 +101,13 @@ namespace NotificationService.UnitTests.Data.Repositories
         /// <summary>
         /// Gets test Meeting notification entities.
         /// </summary>
-        public IList<MeetingNotificationItemEntity> meetingNotificationEntities
+        public static IList<MeetingNotificationItemEntity> meetingNotificationEntities
         {
             get => new List<MeetingNotificationItemEntity>()
             {
                 new MeetingNotificationItemEntity()
                 {
-                    Application = this.ApplicationName,
+                    Application = ApplicationName,
                     Id = "TestId",
                     RequiredAttendees = "user@contoso.com",
                     Subject = "TestSubject",
@@ -115,7 +115,7 @@ namespace NotificationService.UnitTests.Data.Repositories
                 },
                 new MeetingNotificationItemEntity()
                 {
-                    Application = this.ApplicationName,
+                    Application = ApplicationName,
                     Id = "TestId2",
                     RequiredAttendees = "user@contoso.com",
                     Subject = "TestSubject",
@@ -127,12 +127,12 @@ namespace NotificationService.UnitTests.Data.Repositories
         /// <summary>
         /// Gets MailHistoryContainerName.
         /// </summary>
-        protected string MailHistoryContainerName { get => "TestEmailContainer"; }
+        protected static string MailHistoryContainerName { get => "TestEmailContainer"; }
 
         /// <summary>
         /// Gets MeetingHistoryContainerName.
         /// </summary>
-        protected string MeetingHistoryContainerName { get => "TestMeetingContainer"; }
+        protected static string MeetingHistoryContainerName { get => "TestMeetingContainer"; }
 
         /// <summary>
         /// Initialization for all Email Manager Tests.
@@ -150,13 +150,13 @@ namespace NotificationService.UnitTests.Data.Repositories
             var mockMeetingFeedIterator = new Mock<FeedIterator<MeetingNotificationItemCosmosDbEntity>>();
 
             List<EmailNotificationItemCosmosDbEntity> emailNotificationItemCosmosDbEntities = new List<EmailNotificationItemCosmosDbEntity>();
-            foreach (var item in this.NotificationEntities)
+            foreach (var item in NotificationEntities)
             {
                 emailNotificationItemCosmosDbEntities.Add(item.ConvertToEmailNotificationItemCosmosDbEntity());
             }
 
             List<MeetingNotificationItemCosmosDbEntity> meetingNotificationItemCosmosDbEntities = new List<MeetingNotificationItemCosmosDbEntity>();
-            foreach (var item in this.meetingNotificationEntities)
+            foreach (var item in meetingNotificationEntities)
             {
                 meetingNotificationItemCosmosDbEntities.Add(item.ConvertToMeetingNotificationItemCosmosDbEntity());
             }
@@ -165,7 +165,7 @@ namespace NotificationService.UnitTests.Data.Repositories
 
             IOrderedQueryable<MeetingNotificationItemCosmosDbEntity> queryableMeetingEntityReponse = meetingNotificationItemCosmosDbEntities.AsQueryable().OrderBy(e => e.NotificationId);
 
-            this.CosmosDBSetting = Options.Create(new CosmosDBSetting() { Database = "TestDatabase", EmailHistoryContainer = this.MailHistoryContainerName, MeetingHistoryContainer = "TestMeetingContainer", Key = "TestKey", Uri = "TestUri" });
+            this.CosmosDBSetting = Options.Create(new CosmosDBSetting() { Database = "TestDatabase", EmailHistoryContainer = MailHistoryContainerName, MeetingHistoryContainer = "TestMeetingContainer", Key = "TestKey", Uri = "TestUri" });
             this.Logger = Mock.Of<ILogger>();
 
             IQueryable<EmailNotificationItemCosmosDbEntity> queryResult = null;
@@ -187,7 +187,7 @@ namespace NotificationService.UnitTests.Data.Repositories
                 .Returns(queryableEmailEntityReponse);
 
             _ = this.CosmosDBQueryClient
-                .Setup(cdq => cdq.GetCosmosContainer(It.IsAny<string>(), this.MailHistoryContainerName))
+                .Setup(cdq => cdq.GetCosmosContainer(It.IsAny<string>(), MailHistoryContainerName))
                 .Returns(this.EmailHistoryContainer.Object);
 
 
@@ -210,7 +210,7 @@ namespace NotificationService.UnitTests.Data.Repositories
                 .Returns(queryableMeetingEntityReponse);
 
             _ = this.CosmosDBQueryClient
-                .Setup(cdq => cdq.GetCosmosContainer(It.IsAny<string>(), this.MeetingHistoryContainerName))
+                .Setup(cdq => cdq.GetCosmosContainer(It.IsAny<string>(), MeetingHistoryContainerName))
                 .Returns(this.MeetingHistoryContainer.Object);
 
 
