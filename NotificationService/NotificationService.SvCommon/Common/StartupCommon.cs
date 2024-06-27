@@ -7,6 +7,7 @@ namespace NotificationService.SvCommon.Common
     using System.Diagnostics.CodeAnalysis;
     using System.Globalization;
     using Azure.Core.Cryptography;
+    using Azure.Extensions.AspNetCore.Configuration.Secrets;
     using Azure.Identity;
     using Azure.Security.KeyVault.Keys.Cryptography;
     using Microsoft.ApplicationInsights.AspNetCore;
@@ -19,7 +20,6 @@ namespace NotificationService.SvCommon.Common
     using Microsoft.AspNetCore.Http;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.Configuration.AzureAppConfiguration;
-    using Microsoft.Extensions.Configuration.AzureKeyVault;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
     using NotificationService.BusinessLibrary;
@@ -51,12 +51,11 @@ namespace NotificationService.SvCommon.Common
                 .AddEnvironmentVariables();
 
             var config = builder.Build();
-            AzureKeyVaultConfigurationOptions azureKeyVaultConfigurationOptions = new AzureKeyVaultConfigurationOptions(
-                config[ConfigConstants.KeyVaultUrlConfigKey])
+            AzureKeyVaultConfigurationOptions azureKeyVaultConfigurationOptions = new AzureKeyVaultConfigurationOptions()
             {
                 ReloadInterval = TimeSpan.FromSeconds(double.Parse(config[ConfigConstants.KeyVaultConfigRefreshDurationSeconds], CultureInfo.InvariantCulture)),
             };
-            _ = builder.AddAzureKeyVault(azureKeyVaultConfigurationOptions);
+            _ = builder.AddAzureKeyVault(new Uri(config[ConfigConstants.KeyVaultUrlConfigKey]), new DefaultAzureCredential(), azureKeyVaultConfigurationOptions);
 
             this.Configuration = builder.Build();
 
@@ -136,7 +135,11 @@ namespace NotificationService.SvCommon.Common
             _ = services.Configure<StorageAccountSetting>(this.Configuration.GetSection(ConfigConstants.StorageAccountConfigSectionKey));
             _ = services.Configure<StorageAccountSetting>(s => s.ConnectionString = this.Configuration[ConfigConstants.StorageAccountConnectionStringConfigKey]);
             _ = services.Configure<StorageAccountSetting>(s => s.QueueConnectionName = "https://emailstgppeeusstorage.queue.core.windows.net/aktest");
-            _ = services.Configure<StorageAccountSetting>(s => s.BlobConnectionName = "https://emailstgppeeusstorage.blob.core.windows.net/email-blobs");
+
+            // _ = services.Configure<StorageAccountSetting>(s => s.QueueConnectionName = this.Configuration[ConfigConstants.StorageAccountQueueConnectionName]);
+            _ = services.Configure<StorageAccountSetting>(s => s.BlobConnectionName = this.Configuration[ConfigConstants.StorageAccountBlobConnectionName]);
+
+            // _ = services.Configure<StorageAccountSetting>(s => s.TableConnectionName = this.Configuration[ConfigConstants.StorageAccountTableConnectionName]);
             _ = services.Configure<UserTokenSetting>(this.Configuration.GetSection(ConfigConstants.UserTokenSettingConfigSectionKey));
             _ = services.Configure<RetrySetting>(this.Configuration.GetSection(ConfigConstants.RetrySettingConfigSectionKey));
 

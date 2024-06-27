@@ -10,13 +10,14 @@ namespace NotificationsQueueProcessor
     using System;
     using System.IO;
     using System.Reflection;
+    using Azure.Extensions.AspNetCore.Configuration.Secrets;
+    using Azure.Identity;
     using Microsoft.ApplicationInsights.AspNetCore;
     using Microsoft.ApplicationInsights.DataContracts;
     using Microsoft.ApplicationInsights.DependencyCollector;
     using Microsoft.ApplicationInsights.Extensibility;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.Configuration.AzureAppConfiguration;
-    using Microsoft.Extensions.Configuration.AzureKeyVault;
     using Microsoft.Extensions.DependencyInjection;
     using NotificationService.Common;
     using NotificationService.Common.Configurations;
@@ -117,11 +118,11 @@ namespace NotificationsQueueProcessor
 
             var configuration = configBuilder.Build();
 
-            AzureKeyVaultConfigurationOptions azureKeyVaultConfigurationOptions = new AzureKeyVaultConfigurationOptions(configuration[ConfigConstants.KeyVaultUrlConfigKey])
+            AzureKeyVaultConfigurationOptions azureKeyVaultConfigurationOptions = new AzureKeyVaultConfigurationOptions()
             {
                 ReloadInterval = TimeSpan.FromSeconds(double.Parse(configuration[Constants.KeyVaultConfigRefreshDurationSeconds])),
             };
-            _ = configBuilder.AddAzureKeyVault(azureKeyVaultConfigurationOptions);
+            _ = configBuilder.AddAzureKeyVault(new Uri(configuration[ConfigConstants.KeyVaultUrlConfigKey]), new DefaultAzureCredential(), azureKeyVaultConfigurationOptions);
             configuration = configBuilder.Build();
             IConfigurationRefresher configurationRefresher = null;
 

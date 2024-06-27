@@ -6,12 +6,17 @@ namespace NotificationService.BusinessLibrary
     using System;
     using System.Collections.Generic;
     using System.Globalization;
+    using System.Linq;
     using System.Net.Http;
     using System.Net.Http.Headers;
+    using System.Security.Cryptography.X509Certificates;
     using System.Text;
+    using System.Threading;
     using System.Threading.Tasks;
+    using Azure.Core;
+    using Azure.Identity;
     using Microsoft.Extensions.Options;
-    using Microsoft.IdentityModel.Clients.ActiveDirectory;
+    using Microsoft.Identity.Client;
     using Newtonsoft.Json.Linq;
     using NotificationService.BusinessLibrary.Interfaces;
     using NotificationService.Common;
@@ -23,6 +28,8 @@ namespace NotificationService.BusinessLibrary
     /// </summary>
     public class TokenHelper : ITokenHelper
     {
+        private const string BearerText = "Bearer ";
+
         /// <summary>
         /// User Token Configuration.
         /// </summary>
@@ -151,15 +158,69 @@ namespace NotificationService.BusinessLibrary
         private async Task<string> GetResourceAccessTokenFromUserToken(string userAccessToken)
         {
             this.logger.TraceInformation($"Started {nameof(this.GetResourceAccessTokenFromUserToken)} method of {nameof(TokenHelper)}.");
-            UserAssertion userAssertion = new UserAssertion(userAccessToken, this.mSGraphSetting.UserAssertionType);
+
+            // UserAssertion userAssertion = new UserAssertion(userAccessToken, this.mSGraphSetting.UserAssertionType);
             string clientId = this.mSGraphSetting.ClientId;
             string clientValue = this.mSGraphSetting.ClientCredential;
             string authority = string.Format(CultureInfo.InvariantCulture, this.mSGraphSetting.Authority, this.mSGraphSetting.TenantId);
-            AuthenticationContext authContext = new AuthenticationContext(authority);
-            ClientCredential clientCredential = new ClientCredential(clientId, clientValue);
-            var result = await authContext.AcquireTokenAsync(this.mSGraphSetting.GraphResourceId, clientCredential, userAssertion).ConfigureAwait(false);
+
+            // AuthenticationContext authContext = new AuthenticationContext(authority);
+            // ClientCredential clientCredential = new ClientCredential(clientId, clientValue);
+            // var result = await authContext.AcquireTokenAsync(this.mSGraphSetting.GraphResourceId, clientCredential, userAssertion).ConfigureAwait(false);
+            // this.logger.TraceInformation($"Finished {nameof(this.GetResourceAccessTokenFromUserToken)} method of {nameof(TokenHelper)}.");
+            // return result?.AccessToken;
+#if DEBUG
+            var app = await GetTokenUsingSni(clientId, "27D6D3122675FCC4FE11E4977A540FC74169E1F1").ConfigureAwait(false);
+#else
+            var app = await GetTokenUsingFic(authority, clientId, clientId).ConfigureAwait(false);
+#endif
             this.logger.TraceInformation($"Finished {nameof(this.GetResourceAccessTokenFromUserToken)} method of {nameof(TokenHelper)}.");
-            return result?.AccessToken;
+            var authResult = await app.AcquireTokenOnBehalfOf(new[] { this.mSGraphSetting.GraphResourceId + "/.default" }, new UserAssertion(userAccessToken.Replace(BearerText, string.Empty, StringComparison.InvariantCultureIgnoreCase))).ExecuteAsync().ConfigureAwait(false);
+            return authResult.AccessToken;
+        }
+
+
+        private static async Task<IConfidentialClientApplication> GetTokenUsingSni(string clientId, string certificateThumbprint)
+        {
+            var certificate = await GetCertificate(certificateThumbprint).ConfigureAwait(false);
+
+            IConfidentialClientApplication confidentialClientApplication = ConfidentialClientApplicationBuilder.Create(clientId)
+                                                                            .WithAuthority(AzureCloudInstance.AzurePublic, "microsoft.onmicrosoft.com")
+                                                                            .WithCertificate(certificate)
+                                                                            .Build();
+
+            return confidentialClientApplication;
+        }
+
+        /// <summary>
+        /// Get Certificate from device store.
+        /// </summary>
+        /// <param name="certificateThumbprint">Thumbprint of Certificate</param>
+        /// <returns>Certificate</returns>
+        internal static Task<X509Certificate2> GetCertificate(string certificateThumbprint)
+        {
+            using (var store = new X509Store(StoreName.Root, StoreLocation.LocalMachine))
+            {
+                store.Open(OpenFlags.ReadOnly);
+                var cert = store.Certificates.OfType<X509Certificate2>()
+                    .FirstOrDefault(x => x.Thumbprint == certificateThumbprint);
+                return Task.FromResult(cert);
+            }
+        }
+
+        private static async Task<IConfidentialClientApplication> GetTokenUsingFic(string authority, string clientId, string resourceId)
+        {
+            IConfidentialClientApplication clientApplicationWithManagedIdentity = ConfidentialClientApplicationBuilder.Create(clientId).WithAuthority(new Uri(authority))
+                   .WithClientAssertion((AssertionRequestOptions options) =>
+                   {
+                       DefaultAzureCredential defaultAzureCredential;
+
+                       defaultAzureCredential = new DefaultAzureCredential();
+                       var accessToken = defaultAzureCredential.GetToken(new TokenRequestContext(new string[] { resourceId }), CancellationToken.None);
+                       return Task.FromResult(accessToken.Token);
+                   }).Build();
+
+            return clientApplicationWithManagedIdentity;
         }
     }
 }

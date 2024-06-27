@@ -39,6 +39,21 @@ namespace NotificationService.Common.Configurations
         public const string StorageAccountConnectionStringConfigKey = "StorageAccountConnectionString";
 
         /// <summary>
+        /// A constant for Storage Account Queue Connection Name.
+        /// </summary>
+        public const string StorageAccountQueueConnectionName = "StorageAccountQueueConnectionName";
+
+        /// <summary>
+        /// A constant for Storage Account Blob Connection Name.
+        /// </summary>
+        public const string StorageAccountBlobConnectionName = "StorageAccountBlobConnectionName";
+
+        /// <summary>
+        /// A constant for Storage Account Queue Connection Name.
+        /// </summary>
+        public const string StorageAccountTableConnectionName = "StorageAccountTableConnectionName";
+
+        /// <summary>
         /// A constant for MailSetting config key from appsetting.json.
         /// </summary>
         public const string MailSettingsConfigKey = "MailSettings";

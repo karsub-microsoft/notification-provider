@@ -13,7 +13,6 @@ namespace NotificationsQueueProcessor
     using Azure.Identity;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Identity.Client;
-    using Microsoft.IdentityModel.Clients.ActiveDirectory;
     using NotificationService.Common;
 
     /// <summary>
@@ -65,9 +64,6 @@ namespace NotificationsQueueProcessor
 
         private async Task<string> HttpAuthenticationAsync(string authority, string clientId)
         {
-            var authContext = new AuthenticationContext(authority);
-
-            // Change to FIC
 #if !DEBUG
             var authResult = await GetTokenUsingFic(authority, clientId, clientId);
             return authResult;

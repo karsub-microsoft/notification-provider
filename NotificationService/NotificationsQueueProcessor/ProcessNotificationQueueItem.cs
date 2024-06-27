@@ -11,9 +11,9 @@ namespace NotificationsQueueProcessor
     using System.Text;
     using System.Threading.Tasks;
     using Microsoft.Azure.WebJobs;
+    using Microsoft.Azure.WebJobs.Host.Bindings;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.Configuration.AzureAppConfiguration;
-    using Microsoft.WindowsAzure.Storage.Queue;
     using Newtonsoft.Json;
     using NotificationService.Common.Logger;
     using NotificationService.Contracts;
@@ -94,35 +94,37 @@ namespace NotificationsQueueProcessor
         /// <param name="inputQueueItem">Serialized queue item.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
         [FunctionName("ProcessNotificationQueueItem")]
-        public async Task Run([QueueTrigger("%NotificationQueueName%", Connection = "AzureWebJobsStorage")] CloudQueueMessage inputQueueItem)
+        public async Task Run([QueueTrigger("aktest", Connection = "AzureWebJobsStorage")] QueueNotificationItem inputQueueItem)
         {
             var stopwatch = new Stopwatch();
             stopwatch.Start();
-            var notifQueueItem = inputQueueItem.AsString;
+
+            var notifQueueItem = inputQueueItem;
+
+            // var notifQueueItem = inputQueueItem.AsString;
             var traceProps = new Dictionary<string, string>();
-            traceProps["DequeueCount"] = inputQueueItem.DequeueCount.ToString();
-            traceProps["QueueMessageId"] = inputQueueItem.Id;
-            traceProps["InsertionTime"] = inputQueueItem.InsertionTime.ToString();
+            traceProps["DequeueCount"] = 0.ToString();
+            traceProps["QueueMessageId"] = Guid.NewGuid().ToString();
+            traceProps["InsertionTime"] = DateTime.Now.ToString();
             this.logger.TraceInformation($"ProcessNotificationQueueItem started processing: {notifQueueItem}");
             QueueNotificationItem queueNotificationItem = null;
             try
             {
-                if (string.IsNullOrEmpty(notifQueueItem))
-                {
-                    throw new ArgumentException("message", nameof(notifQueueItem));
-                }
+                // if (string.IsNullOrEmpty(notifQueueItem))
+                // {
+                //     throw new ArgumentException("message", nameof(notifQueueItem));
+                // }
+                queueNotificationItem = notifQueueItem;
 
-                queueNotificationItem = JsonConvert.DeserializeObject<QueueNotificationItem>(notifQueueItem);
-
-                traceProps[AIConstants.Application] = queueNotificationItem?.Application;
-                traceProps[AIConstants.CorrelationId] = queueNotificationItem?.CorrelationId;
-                traceProps[AIConstants.NotificationIds] = string.Join(',', queueNotificationItem?.NotificationIds);
-                traceProps[AIConstants.EmailNotificationCount] = string.Join(',', queueNotificationItem?.NotificationIds?.Length);
-                traceProps[AIConstants.NotificationType] = queueNotificationItem?.NotificationType.ToString();
+                //traceProps[AIConstants.Application] = queueNotificationItem?.Application;
+                //traceProps[AIConstants.CorrelationId] = queueNotificationItem?.CorrelationId;
+                //traceProps[AIConstants.NotificationIds] = string.Join(',', queueNotificationItem?.NotificationIds);
+                //traceProps[AIConstants.EmailNotificationCount] = string.Join(',', queueNotificationItem?.NotificationIds?.Length);
+                //traceProps[AIConstants.NotificationType] = queueNotificationItem?.NotificationType.ToString();
                 this.logger.TraceInformation($"ProcessNotificationQueueItem. Notification Item: {notifQueueItem}", traceProps);
                 this.logger.WriteCustomEvent("QueueEmailNotifications Started", traceProps);
 
-                _ = traceProps.Remove(AIConstants.NotificationIds);
+                // _ = traceProps.Remove(AIConstants.NotificationIds);
                 if (queueNotificationItem != null)
                 {
                     var notifType = queueNotificationItem.NotificationType == NotificationType.Mail ? Constants.EmailNotificationType : Constants.MeetingNotificationType;
@@ -158,7 +160,7 @@ namespace NotificationsQueueProcessor
                 int maxDeqCount;
                 if (int.TryParse(maxDequeueCountVal, out maxDeqCount))
                 {
-                    if (inputQueueItem.DequeueCount < maxDeqCount)
+                    if (0 < maxDeqCount)
                     {
                         this.logger.WriteException(ex, traceProps);
                         throw;
