@@ -90,7 +90,10 @@ namespace NotificationService.BusinessLibrary
                     NotificationType = NotificationType.Meet,
                     IgnoreAlreadySent = ignoreAlreadySent,
                 };
-                cloudMessages.Add(JsonConvert.SerializeObject(cloudMessage));
+
+                // cloudMessages.Add(JsonConvert.SerializeObject(cloudMessage));
+                var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(cloudMessage));
+                cloudMessages.Add(System.Convert.ToBase64String(plainTextBytes));
             }
 
             return cloudMessages;
@@ -119,7 +122,10 @@ namespace NotificationService.BusinessLibrary
                     NotificationType = notifType,
                     IgnoreAlreadySent = ignoreAlreadySent,
                 };
-                cloudMessages.Add(JsonConvert.SerializeObject(cloudMessage));
+
+                // cloudMessages.Add(JsonConvert.SerializeObject(cloudMessage));
+                var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(cloudMessage));
+                cloudMessages.Add(System.Convert.ToBase64String(plainTextBytes));
             }
 
             return cloudMessages;
