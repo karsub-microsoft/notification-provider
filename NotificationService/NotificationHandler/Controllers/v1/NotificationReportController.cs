@@ -8,7 +8,6 @@ namespace NotificationHandler.Controllers
     using System.Threading.Tasks;
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
-    using Microsoft.Azure.Cosmos.Table;
     using NotificationHandler.Controllers.V1;
     using NotificationService.BusinessLibrary;
     using NotificationService.BusinessLibrary.Interfaces;
@@ -69,16 +68,14 @@ namespace NotificationHandler.Controllers
                 throw new System.ArgumentException("Notification Filter Request cannot be null");
             }
 
-            Tuple<IList<NotificationReportResponse>, TableContinuationToken> notificationResponses;
+            Tuple<IList<NotificationReportResponse>, string> notificationResponses;
             this.logger.TraceInformation($"Started {nameof(this.GetReportNotifications)} method of {nameof(NotificationReportController)}.");
             notificationResponses = await this.notificationReportManager.GetReportNotifications(notificationFilterRequest).ConfigureAwait(false);
-            string nextPartitionKey = notificationResponses.Item2?.NextPartitionKey;
-            string nextRowKey = notificationResponses.Item2?.NextRowKey;
-            if (nextPartitionKey != null && nextRowKey != null)
+            string continuationToken = notificationResponses.Item2;
+            if (continuationToken != null)
             {
-                this.Response.Headers.Add("Access-Control-Expose-Headers", "X-NextPartitionKey, X-NextRowKey");
-                this.Response.Headers.Add("X-NextPartitionKey", nextPartitionKey);
-                this.Response.Headers.Add("X-NextRowKey", nextRowKey);
+                this.Response.Headers.Add("Access-Control-Expose-Headers", "X-NextContinuationKey");
+                this.Response.Headers.Add("X-NextContinuationKey", continuationToken);
             }
 
             this.logger.TraceInformation($"Finished {nameof(this.GetReportNotifications)} method of {nameof(NotificationReportController)}.");
@@ -145,16 +142,14 @@ namespace NotificationHandler.Controllers
                 throw new System.ArgumentException("Notification Filter Request cannot be null");
             }
 
-            Tuple<IList<MeetingInviteReportResponse>, TableContinuationToken> notificationResponses;
+            Tuple<IList<MeetingInviteReportResponse>, string> notificationResponses;
             this.logger.TraceInformation($"Started {nameof(this.GetMeetingInviteReportNotifications)} method of {nameof(NotificationReportController)}.");
             notificationResponses = await this.notificationReportManager.GetMeetingInviteReportNotifications(notificationFilterRequest).ConfigureAwait(false);
-            string nextPartitionKey = notificationResponses.Item2?.NextPartitionKey;
-            string nextRowKey = notificationResponses.Item2?.NextRowKey;
-            if (nextPartitionKey != null && nextRowKey != null)
+            string nextContinuationToken = notificationResponses.Item2;
+            if (nextContinuationToken != null)
             {
-                this.Response.Headers.Add("Access-Control-Expose-Headers", "X-NextPartitionKey, X-NextRowKey");
-                this.Response.Headers.Add("X-NextPartitionKey", nextPartitionKey);
-                this.Response.Headers.Add("X-NextRowKey", nextRowKey);
+                this.Response.Headers.Add("Access-Control-Expose-Headers", "X-NextContinuationKey");
+                this.Response.Headers.Add("X-NextContinuationKey", nextContinuationToken);
             }
 
             this.logger.TraceInformation($"Finished {nameof(this.GetMeetingInviteReportNotifications)} method of {nameof(NotificationReportController)}.");

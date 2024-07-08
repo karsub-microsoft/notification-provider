@@ -5,12 +5,13 @@ namespace NotificationService.Contracts.Entities
 {
     using System;
     using System.Runtime.Serialization;
-    using Microsoft.Azure.Cosmos.Table;
+    using Azure;
+    using Azure.Data.Tables;
 
     /// <summary>
     /// MeetingNotificationItemEntity.
     /// </summary>
-    public class MeetingNotificationItemTableEntity : TableEntity
+    public class MeetingNotificationItemTableEntity : ITableEntity
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="MeetingNotificationItemTableEntity"/> class.
@@ -229,5 +230,9 @@ namespace NotificationService.Contracts.Entities
         /// Gets or Sets ShowAs
         /// </summary>
         public string ShowAs { get; set; }
+        public string PartitionKey { get; set; }
+        public string RowKey { get; set; }
+        public DateTimeOffset? Timestamp { get; set; }
+        public ETag ETag { get; set; }
     }
 }

@@ -96,6 +96,12 @@ namespace NotificationsQueueProcessor
 
             _ = builder.Services.Configure<StorageAccountSetting>(configuration.GetSection(ConfigConstants.StorageAccountConfigSectionKey));
             _ = builder.Services.Configure<StorageAccountSetting>(s => s.ConnectionString = configuration[ConfigConstants.StorageAccountConnectionStringConfigKey]);
+            _ = builder.Services.Configure<StorageAccountSetting>(s => s.QueueConnectionName = "https://emailstgppeeusstorage.queue.core.windows.net/aktest");
+
+            // _ = builder.Services.Configure<StorageAccountSetting>(s => s.QueueConnectionName = configuration[ConfigConstants.StorageAccountQueueConnectionName]);
+            _ = builder.Services.Configure<StorageAccountSetting>(s => s.BlobConnectionName = configuration[ConfigConstants.StorageAccountBlobConnectionName]);
+
+            _ = builder.Services.Configure<StorageAccountSetting>(s => s.TableConnectionName = configuration[ConfigConstants.StorageAccountTableConnectionName]);
             _ = builder.Services.AddScoped<IRepositoryFactory, RepositoryFactory>();
             _ = builder.Services.AddScoped<TableStorageEmailRepository>();
             _ = builder.Services.AddScoped<IEmailNotificationRepository, TableStorageEmailRepository>(s => s.GetService<TableStorageEmailRepository>());

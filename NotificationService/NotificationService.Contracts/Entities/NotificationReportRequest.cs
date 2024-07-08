@@ -3,15 +3,17 @@
 
 namespace NotificationService.Contracts
 {
+    using System;
     using System.Collections.Generic;
     using System.Runtime.Serialization;
-    using Microsoft.Azure.Cosmos.Table;
+    using Azure;
+    using Azure.Data.Tables;
 
     /// <summary>
     /// Base class for Notification Items.
     /// </summary>
     [DataContract]
-    public class NotificationReportRequest
+    public class NotificationReportRequest : ITableEntity
     {
         /// <summary>
         /// Gets or sets NotificationPriorityFilter.
@@ -101,6 +103,14 @@ namespace NotificationService.Contracts
         /// Gets or sets TableContinuationToken.
         /// </summary>
         [DataMember(Name = "Token")]
-        public TableContinuationToken Token { get; set; }
+        public string Token { get; set; }
+
+        public string PartitionKey { get ; set; }
+
+        public string RowKey { get; set; }
+
+        public DateTimeOffset? Timestamp { get; set; }
+
+        public ETag ETag { get; set; }
     }
 }

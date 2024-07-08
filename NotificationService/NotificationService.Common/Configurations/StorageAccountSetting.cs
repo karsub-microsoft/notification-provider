@@ -17,6 +17,8 @@ namespace NotificationService.Common
 
         public string BlobConnectionName { get; set; }
 
+        public string TableConnectionName { get; set; }
+
         /// <summary>
         /// Gets or sets the Blob Container Name.
         /// </summary>

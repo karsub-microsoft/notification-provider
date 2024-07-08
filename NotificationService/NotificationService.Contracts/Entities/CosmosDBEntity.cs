@@ -3,15 +3,16 @@
 
 namespace NotificationService.Contracts
 {
+    using Azure;
+    using Azure.Data.Tables;
     using System;
     using System.Runtime.Serialization;
-    using Microsoft.Azure.Cosmos.Table;
 
     /// <summary>
     /// Cosmos DB Base entity.
     /// </summary>
     [DataContract]
-    public abstract class CosmosDBEntity : TableEntity
+    public abstract class CosmosDBEntity : ITableEntity
     {
         /// <summary>Gets or sets the id.</summary>
         [DataMember(Name = "id")]
@@ -40,5 +41,25 @@ namespace NotificationService.Contracts
         /// <summary>Gets or sets the updated at.</summary>
         [DataMember(Name = "UpdatedDateTime")]
         public DateTime UpdatedDateTime { get; set; }
+
+        /// <summary>
+        /// Gets or sets PartitionKey for the Document.
+        /// </summary>
+        public string PartitionKey { get; set; }
+
+        /// <summary>
+        /// Gets or sets Row Key for the Document.
+        /// </summary>
+        public string RowKey { get; set; }
+
+        /// <summary>
+        /// Gets or sets Timestamp for the Document.
+        /// </summary>
+        public DateTimeOffset? Timestamp { get; set; }
+
+        /// <summary>
+        /// Gets or sets Etag for the document.
+        /// </summary>
+        public ETag ETag { get; set; }
     }
 }

@@ -139,7 +139,7 @@ namespace NotificationService.SvCommon.Common
             // _ = services.Configure<StorageAccountSetting>(s => s.QueueConnectionName = this.Configuration[ConfigConstants.StorageAccountQueueConnectionName]);
             _ = services.Configure<StorageAccountSetting>(s => s.BlobConnectionName = this.Configuration[ConfigConstants.StorageAccountBlobConnectionName]);
 
-            // _ = services.Configure<StorageAccountSetting>(s => s.TableConnectionName = this.Configuration[ConfigConstants.StorageAccountTableConnectionName]);
+            _ = services.Configure<StorageAccountSetting>(s => s.TableConnectionName = this.Configuration[ConfigConstants.StorageAccountTableConnectionName]);
             _ = services.Configure<UserTokenSetting>(this.Configuration.GetSection(ConfigConstants.UserTokenSettingConfigSectionKey));
             _ = services.Configure<RetrySetting>(this.Configuration.GetSection(ConfigConstants.RetrySettingConfigSectionKey));
 

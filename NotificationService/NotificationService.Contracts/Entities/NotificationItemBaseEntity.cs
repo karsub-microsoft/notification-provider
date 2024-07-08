@@ -5,12 +5,14 @@ namespace NotificationService.Contracts
 {
     using System;
     using System.Runtime.Serialization;
+    using Azure;
+    using Azure.Data.Tables;
 
     /// <summary>
     /// Base class for Notification Items.
     /// </summary>
     [DataContract]
-    public abstract class NotificationItemBaseEntity : CosmosDBEntity
+    public abstract class NotificationItemBaseEntity : ITableEntity
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="NotificationItemBaseEntity"/> class.
@@ -61,5 +63,30 @@ namespace NotificationService.Contracts
         /// </summary>
         [DataMember(Name = "ErrorMessage")]
         public string ErrorMessage { get; set; }
+
+        /// <inheritdoc/>
+        public string PartitionKey { get; set; }
+
+        /// <inheritdoc/>
+        public string RowKey { get; set; }
+
+        /// <inheritdoc/>
+        public DateTimeOffset? Timestamp { get; set; }
+
+        /// <inheritdoc/>
+        public ETag ETag { get; set; }
+
+        /// <inheritdoc/>
+        public string Id { get; set; }
+
+        /// <summary>
+        /// Gets or sets the CreatedDateTime.
+        /// </summary>
+        public DateTime CreatedDateTime { get; set; }
+
+        /// <summary>
+        /// Gets or sets the UpdatedDateTime.
+        /// </summary>
+        public DateTime UpdatedDateTime { get; set; }
     }
 }

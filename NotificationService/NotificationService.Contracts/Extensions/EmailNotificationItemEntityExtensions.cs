@@ -11,6 +11,8 @@ namespace NotificationService.Contracts
     using System.Linq;
     using System.Net.Mail;
     using System.Net.Mime;
+    using Azure;
+    using Azure.Data.Tables;
     using NotificationService.Common.Configurations;
     using NotificationService.Contracts.Entities;
     using NotificationService.Contracts.Models.Reports;
@@ -182,7 +184,7 @@ namespace NotificationService.Contracts
         /// </summary>
         /// <param name="emailNotificationItemEntity">Email Notification Item Entity.</param>
         /// <returns><see cref="EmailNotificationItemTableEntity"/>.</returns>
-        public static EmailNotificationItemTableEntity ConvertToEmailNotificationItemTableEntity(this EmailNotificationItemEntity emailNotificationItemEntity)
+        public static ITableEntity ConvertToEmailNotificationItemTableEntity(this EmailNotificationItemEntity emailNotificationItemEntity)
         {
             if (emailNotificationItemEntity is null)
             {
@@ -205,12 +207,13 @@ namespace NotificationService.Contracts
             emailNotificationItemTableEntity.Status = emailNotificationItemEntity.Status.ToString();
             emailNotificationItemTableEntity.Subject = emailNotificationItemEntity.Subject;
             emailNotificationItemTableEntity.TemplateId = emailNotificationItemEntity.TemplateId;
-            emailNotificationItemTableEntity.Timestamp = emailNotificationItemEntity.Timestamp;
+            emailNotificationItemTableEntity.Timestamp = DateTime.UtcNow;
             emailNotificationItemTableEntity.To = emailNotificationItemEntity.To;
             emailNotificationItemTableEntity.TrackingId = emailNotificationItemEntity.TrackingId;
             emailNotificationItemTableEntity.TryCount = emailNotificationItemEntity.TryCount;
-            emailNotificationItemTableEntity.ETag = emailNotificationItemEntity.ETag;
-            emailNotificationItemTableEntity.SendOnUtcDate = emailNotificationItemEntity.SendOnUtcDate;
+
+            emailNotificationItemTableEntity.ETag = ETag.All;
+            emailNotificationItemTableEntity.SendOnUtcDate = emailNotificationItemEntity.SendOnUtcDate.ToUniversalTime();
             return emailNotificationItemTableEntity;
         }
 

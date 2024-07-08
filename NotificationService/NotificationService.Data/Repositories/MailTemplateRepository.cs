@@ -6,7 +6,7 @@ namespace NotificationService.Data
     using System;
     using System.Collections.Generic;
     using System.Threading.Tasks;
-    using Microsoft.Azure.Cosmos.Table;
+    using Azure.Data.Tables;
     using Microsoft.Extensions.Options;
     using NotificationService.Common;
     using NotificationService.Common.Logger;
@@ -20,7 +20,7 @@ namespace NotificationService.Data
         private readonly ILogger logger;
         private readonly ICloudStorageClient cloudStorageClient;
         private readonly ITableStorageClient tableStorageClient;
-        private readonly CloudTable cloudTable;
+        private readonly TableClient cloudTable;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MailTemplateRepository"/> class.
@@ -65,20 +65,11 @@ namespace NotificationService.Data
             string blobName = GetBlobName(applicationName, templateName);
             var contentTask = this.cloudStorageClient.DownloadBlobAsync(blobName).ConfigureAwait(false);
 
-            TableOperation retrieveOperation = TableOperation.Retrieve<MailTemplateEntity>(applicationName, templateName);
-
-            TableResult retrievedResult = await this.cloudTable.ExecuteAsync(retrieveOperation).ConfigureAwait(false);
-
-            MailTemplateEntity templateEntity = retrievedResult?.Result as MailTemplateEntity;
-
-            if (templateEntity != null)
-            {
-                templateEntity.Content = await contentTask;
-            }
+            var retrievedResult = await this.cloudTable.GetEntityAsync<MailTemplateEntity>(applicationName, templateName).ConfigureAwait(false);
 
             this.logger.TraceInformation($"Finished {nameof(this.GetMailTemplate)} method of {nameof(MailTemplateRepository)}.", traceProps);
 
-            return templateEntity;
+            return retrievedResult;
         }
 
         /// <inheritdoc/>
@@ -90,16 +81,19 @@ namespace NotificationService.Data
             this.logger.TraceInformation($"Started {nameof(this.GetAllTemplateEntities)} method of {nameof(MailTemplateRepository)}.", traceProps);
 
             List<MailTemplateEntity> mailTemplateEntities = new List<MailTemplateEntity>();
-            var filterPartitionkey = TableQuery.GenerateFilterCondition(nameof(MailTemplateEntity.PartitionKey), QueryComparisons.Equal, applicationName);
-            var query = new TableQuery<MailTemplateEntity>().Where(filterPartitionkey);
-            TableContinuationToken continuationToken = null;
-            do
+            //var filterPartitionkey = TableQuery.GenerateFilterCondition(nameof(MailTemplateEntity.PartitionKey), QueryComparisons.Equal, applicationName);
+            //var query = new TableQuery<MailTemplateEntity>().Where(filterPartitionkey);
+            //TableContinuationToken continuationToken = null;
+            //do
+            //{
+            var pages = this.cloudTable.QueryAsync<MailTemplateEntity>(a => a.PartitionKey.Equals(applicationName, StringComparison.InvariantCultureIgnoreCase)).AsPages().ConfigureAwait(false);
+            await foreach (var page in pages)
             {
-                var page = await this.cloudTable.ExecuteQuerySegmentedAsync(query, continuationToken).ConfigureAwait(false);
-                continuationToken = page.ContinuationToken;
-                mailTemplateEntities.AddRange(page.Results);
+                mailTemplateEntities.AddRange(page.Values);
             }
-            while (continuationToken != null);
+
+            //}
+            //while (continuationToken != null);
 
             this.logger.TraceInformation($"Finished {nameof(this.GetAllTemplateEntities)} method of {nameof(MailTemplateRepository)}.", traceProps);
 
@@ -127,9 +121,14 @@ namespace NotificationService.Data
             mailTemplateEntity.Content = null;
 
             // Create the TableOperation object that inserts the entity.
-            TableOperation insertOperation = TableOperation.InsertOrReplace(mailTemplateEntity);
-            var response = await this.cloudTable.ExecuteAsync(insertOperation).ConfigureAwait(false);
-            result = true;
+            var response = await this.cloudTable.UpsertEntityAsync(mailTemplateEntity).ConfigureAwait(false);
+
+            // .ExecuteAsync(insertOperation).ConfigureAwait(false);
+            if (!response.IsError)
+            {
+                result = true;
+            }
+
             this.logger.TraceInformation($"Finished {nameof(this.UpsertEmailTemplateEntities)} method of {nameof(MailTemplateRepository)}.");
 
             return result;
@@ -150,13 +149,14 @@ namespace NotificationService.Data
             if (status)
             {
                 // Retrieve the entity to be deleted.
-                TableOperation retrieveOperation = TableOperation.Retrieve<MailTemplateEntity>(applicationName, templateName);
-                TableResult tableResult = await this.cloudTable.ExecuteAsync(retrieveOperation).ConfigureAwait(false);
-                MailTemplateEntity mailTemplateEntity = tableResult.Result as MailTemplateEntity;
+                //    TableOperation retrieveOperation = TableOperation.Retrieve<MailTemplateEntity>(applicationName, templateName);
+                //    TableResult tableResult = await this.cloudTable.GetEntityAsync<MailTemplateEntity>(applicationName, templateName).ConfigureAwait(false);
+                //    // ExecuteAsync(retrieveOperation).ConfigureAwait(false);
+                //    MailTemplateEntity mailTemplateEntity = tableResult.Result as MailTemplateEntity;
 
-                // Create the TableOperation object that Delets the entity.
-                TableOperation deleteOperation = TableOperation.Delete(mailTemplateEntity);
-                var response = await this.cloudTable.ExecuteAsync(deleteOperation).ConfigureAwait(false);
+                //// Create the TableOperation object that Delets the entity.
+                // TableOperation deleteOperation = TableOperation.Delete(mailTemplateEntity);
+                var response = await this.cloudTable.DeleteEntityAsync(applicationName, templateName).ConfigureAwait(false);
                 result = true;
             }
 

@@ -5,13 +5,14 @@ namespace NotificationService.Contracts
 {
     using System;
     using System.Runtime.Serialization;
-    using Microsoft.Azure.Cosmos.Table;
+    using Azure;
+    using Azure.Data.Tables;
 
     /// <summary>
     /// Email Notification Table Entity.
     /// </summary>
     [DataContract]
-    public class EmailNotificationItemTableEntity : TableEntity
+    public class EmailNotificationItemTableEntity : ITableEntity
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="EmailNotificationItemTableEntity"/> class.
@@ -136,5 +137,13 @@ namespace NotificationService.Contracts
         /// </summary>
         [DataMember(Name = "EmailBodyBlobPath")]
         public string EmailBodyBlobPath { get; set; }
+
+        public string PartitionKey { get; set; }
+
+        public string RowKey { get; set; }
+
+        public DateTimeOffset? Timestamp { get; set; }
+
+        public ETag ETag { get; set; }
     }
 }

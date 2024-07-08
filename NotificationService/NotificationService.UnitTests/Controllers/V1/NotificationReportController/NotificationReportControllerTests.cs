@@ -7,7 +7,6 @@ namespace NotificationService.UnitTests.Controllers.V1.NotificationReportControl
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
     using System.Threading.Tasks;
-    using Microsoft.Azure.Cosmos.Table;
     using Moq;
     using NotificationHandler.Controllers;
     using NotificationService.BusinessLibrary.Interfaces;
@@ -57,7 +56,7 @@ namespace NotificationService.UnitTests.Controllers.V1.NotificationReportControl
         {
             NotificationReportController notificationReportController = new NotificationReportController(this.notificationReportManager.Object, this.logger);
             IList<NotificationReportResponse> response = new List<NotificationReportResponse>();
-            Tuple<IList<NotificationReportResponse>, TableContinuationToken> notificationResponses = new Tuple<IList<NotificationReportResponse>, TableContinuationToken>(response, null);
+            Tuple<IList<NotificationReportResponse>, string> notificationResponses = new Tuple<IList<NotificationReportResponse>, string>(response, null);
             _ = this.notificationReportManager
                 .Setup(notificationReportManager => notificationReportManager.GetReportNotifications(It.IsAny<NotificationReportRequest>()))
                 .Returns(Task.FromResult(notificationResponses));
@@ -126,7 +125,7 @@ namespace NotificationService.UnitTests.Controllers.V1.NotificationReportControl
         {
             NotificationReportController notificationReportController = new NotificationReportController(this.notificationReportManager.Object, this.logger);
             IList<MeetingInviteReportResponse> response = new List<MeetingInviteReportResponse>();
-            Tuple<IList<MeetingInviteReportResponse>, TableContinuationToken> notificationResponses = new Tuple<IList<MeetingInviteReportResponse>, TableContinuationToken>(response, null);
+            Tuple<IList<MeetingInviteReportResponse>, string> notificationResponses = new Tuple<IList<MeetingInviteReportResponse>, string>(response, null);
             _ = this.notificationReportManager
                 .Setup(notificationReportManager => notificationReportManager.GetMeetingInviteReportNotifications(It.IsAny<NotificationReportRequest>()))
                 .Returns(Task.FromResult(notificationResponses));
@@ -159,7 +158,7 @@ namespace NotificationService.UnitTests.Controllers.V1.NotificationReportControl
         //    List<NotificationReportResponse> dbEntities = new List<NotificationReportResponse>();
         //    dbEntities.Add(new NotificationReportResponse() { NotificationId = "1", Application = "SelectedApp" });
         //    dbEntities.Add(new NotificationReportResponse() { NotificationId = "2", Application = "SelectedApp" });
-        //    var tuple = Tuple.Create<IList<NotificationReportResponse>, TableContinuationToken>(dbEntities, new TableContinuationToken { NextPartitionKey = "a", NextRowKey = "b" });
+        //    var tuple = Tuple.Create<IList<NotificationReportResponse>, string>(dbEntities, new string { NextPartitionKey = "a", NextRowKey = "b" });
         //    _ = this.notificationReportManager
         //        .Setup(reportManager => reportManager.GetReportNotifications(request)).Returns(Task.FromResult(tuple));
         //    Task<IActionResult> result = notificationReportController.GetReportNotifications(request);

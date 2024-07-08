@@ -3,7 +3,7 @@
 
 namespace NotificationService.Data
 {
-    using Microsoft.Azure.Cosmos.Table;
+    using Azure.Data.Tables;
 
     /// <summary>
     /// Interface to Azure Cloud Storage.
@@ -15,6 +15,6 @@ namespace NotificationService.Data
         /// </summary>
         /// <param name="tableName">Name of queue.</param>
         /// <returns><see cref="CloudTable"/>.</returns>
-        CloudTable GetCloudTable(string tableName);
+        TableClient GetCloudTable(string tableName);
     }
 }

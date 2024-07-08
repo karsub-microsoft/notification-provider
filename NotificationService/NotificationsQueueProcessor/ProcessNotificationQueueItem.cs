@@ -130,7 +130,9 @@ namespace NotificationsQueueProcessor
                     var notifType = queueNotificationItem.NotificationType == NotificationType.Mail ? Constants.EmailNotificationType : Constants.MeetingNotificationType;
 
                     var stringContent = new StringContent(JsonConvert.SerializeObject(queueNotificationItem), Encoding.UTF8, Constants.JsonMIMEType);
-                    string notificationServiceEndpoint = this.configuration?[Constants.NotificationServiceEndpoint];
+
+                    // string notificationServiceEndpoint = this.configuration?[Constants.NotificationServiceEndpoint];
+                    string notificationServiceEndpoint = "https://localhost:44300";
                     this.logger.TraceVerbose($"ProcessNotificationQueueItem fetching token to call notification service endpoint...", traceProps);
 
                     this.logger.TraceInformation($"ProcessNotificationQueueItem calling notification service endpoint...", traceProps);

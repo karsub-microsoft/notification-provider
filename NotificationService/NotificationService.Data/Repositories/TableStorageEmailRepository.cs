@@ -7,17 +7,21 @@ namespace NotificationService.Data.Repositories
     using System.Collections.Generic;
     using System.Globalization;
     using System.Linq;
+    using System.Linq.Expressions;
     using System.Threading.Tasks;
+    using Azure;
+    using Azure.Data.Tables;
     using Microsoft.Azure.Cosmos;
-    using Microsoft.Azure.Cosmos.Table;
     using Microsoft.Extensions.Options;
     using Newtonsoft.Json;
     using NotificationService.Common;
     using NotificationService.Common.Logger;
+    using NotificationService.Common.Utility;
     using NotificationService.Contracts;
     using NotificationService.Contracts.Entities;
     using NotificationService.Contracts.Extensions;
     using NotificationService.Contracts.Models.Request;
+    using NotificationService.Data.Utilities;
 
     /// <summary>
     /// Repository for TableStorage.
@@ -37,12 +41,12 @@ namespace NotificationService.Data.Repositories
         /// <summary>
         /// Instance of <see cref="emailHistoryTable"/>.
         /// </summary>
-        private readonly CloudTable emailHistoryTable;
+        private readonly TableClient emailHistoryTable;
 
         /// <summary>
         /// Instance of <see cref="meetingHistoryTable"/>.
         /// </summary>
-        private readonly CloudTable meetingHistoryTable;
+        private readonly TableClient meetingHistoryTable;
 
         /// <summary>
         /// Instance of Cosmos DB Configuration.
@@ -133,13 +137,22 @@ namespace NotificationService.Data.Repositories
 
             foreach (var batch in batchesToCreate)
             {
-                TableBatchOperation batchOperation = new TableBatchOperation();
+                // TableBatchOperation batchOperation = new TableBatchOperation();
+                List<TableTransactionAction> tableTransactionAction = new List<TableTransactionAction>();
                 foreach (var item in batch)
                 {
-                    batchOperation.Insert(item.ConvertToEmailNotificationItemTableEntity());
+                    tableTransactionAction.Add(new TableTransactionAction(
+                    TableTransactionActionType.Add,
+                    item.ConvertToEmailNotificationItemTableEntity(),
+                    ETag.All));
                 }
 
-                Task.WaitAll(this.emailHistoryTable.ExecuteBatchAsync(batchOperation));
+                var response = await this.emailHistoryTable.SubmitTransactionAsync(tableTransactionAction).ConfigureAwait(false);
+
+                if (response.GetRawResponse().IsError)
+                {
+                    throw new Exception($"Error while creating email notification entities in table storage. {response.Value[0].Status}");
+                }
             }
 
             this.logger.TraceInformation($"Finished {nameof(this.CreateEmailNotificationItemEntities)} method of {nameof(TableStorageEmailRepository)}.", traceProps);
@@ -155,10 +168,20 @@ namespace NotificationService.Data.Repositories
                 throw new System.ArgumentNullException(nameof(notificationIds));
             }
 
-            string filterExpression = null;
+            Expression<Func<EmailNotificationItemTableEntity, bool>> filterExpression = null;
             foreach (var item in notificationIds)
             {
-                filterExpression = filterExpression == null ? TableQuery.GenerateFilterCondition("NotificationId", QueryComparisons.Equal, item) : filterExpression + " or " + TableQuery.GenerateFilterCondition("NotificationId", QueryComparisons.Equal, item);
+                // filterExpression = filterExpression == null ? $"NotificationId eq {item}" : $" or NotificationId eq {item}";
+                Expression<Func<EmailNotificationItemTableEntity, bool>> expression = a => a.NotificationId.Equals(item, StringComparison.InvariantCultureIgnoreCase);
+
+                if (filterExpression != null)
+                {
+                    filterExpression = expression;
+                }
+                else
+                {
+                    filterExpression = ExpressionUtility.Or(filterExpression, expression);
+                }
             }
 
             var traceProps = new Dictionary<string, string>();
@@ -167,8 +190,16 @@ namespace NotificationService.Data.Repositories
 
             this.logger.TraceInformation($"Started {nameof(this.GetEmailNotificationItemEntities)} method of {nameof(TableStorageEmailRepository)}.", traceProps);
             List<EmailNotificationItemTableEntity> emailNotificationItemEntities = new List<EmailNotificationItemTableEntity>();
-            var linqQuery = new TableQuery<EmailNotificationItemTableEntity>().Where(filterExpression);
-            emailNotificationItemEntities = this.emailHistoryTable.ExecuteQuery(linqQuery)?.Select(ent => ent).ToList();
+
+            // var linqQuery = new TableQuery<EmailNotificationItemTableEntity>().Where(filterExpression);
+            var emailNotificationItemEntitiesResponse = this.emailHistoryTable.QueryAsync(filterExpression).ConfigureAwait(false);
+
+            await foreach (var item in emailNotificationItemEntitiesResponse)
+            {
+                emailNotificationItemEntities.Add(item);
+            }
+
+            // ExecuteQuery(linqQuery)?.Select(ent => ent).ToList();
             IList<EmailNotificationItemEntity> notificationEntities = emailNotificationItemEntities.Select(e => e.ConvertToEmailNotificationItemEntity()).ToList();
             IList<EmailNotificationItemEntity> updatedNotificationEntities = notificationEntities;
             if (applicationName != null)
@@ -191,12 +222,20 @@ namespace NotificationService.Data.Repositories
             var traceprops = new Dictionary<string, string>();
             traceprops[AIConstants.Application] = applicationName;
             traceprops[AIConstants.NotificationIds] = notificationId;
-            string filterExpression = TableQuery.GenerateFilterCondition("NotificationId", QueryComparisons.Equal, notificationId);
 
+            // string filterExpression = TableQuery.GenerateFilterCondition("NotificationId", QueryComparisons.Equal, notificationId);
             this.logger.TraceInformation($"Started {nameof(this.GetEmailNotificationItemEntity)} method of {nameof(TableStorageEmailRepository)}.", traceprops);
             List<EmailNotificationItemTableEntity> emailNotificationItemEntities = new List<EmailNotificationItemTableEntity>();
-            var linqQuery = new TableQuery<EmailNotificationItemTableEntity>().Where(filterExpression);
-            emailNotificationItemEntities = this.emailHistoryTable.ExecuteQuery(linqQuery)?.Select(ent => ent).ToList();
+
+            // var linqQuery = new TableQuery<EmailNotificationItemTableEntity>().Where(filterExpression);
+            var emailNotificationItemEntitiesResponse = this.emailHistoryTable.QueryAsync<EmailNotificationItemTableEntity>(a => a.NotificationId.Equals(notificationId, StringComparison.OrdinalIgnoreCase)).ConfigureAwait(false);
+
+            await foreach (var item in emailNotificationItemEntitiesResponse)
+            {
+                emailNotificationItemEntities.Add(item);
+            }
+
+            // ExecuteQuery(linqQuery)?.Select(ent => ent).ToList();
             List<EmailNotificationItemEntity> notificationEntities = emailNotificationItemEntities.Select(e => e.ConvertToEmailNotificationItemEntity()).ToList();
             IList<EmailNotificationItemEntity> updatedNotificationEntities = notificationEntities;
             if (applicationName != null)
@@ -220,7 +259,7 @@ namespace NotificationService.Data.Repositories
         }
 
         /// <inheritdoc/>
-        public Task<Tuple<IList<EmailNotificationItemEntity>, TableContinuationToken>> GetEmailNotifications(NotificationReportRequest notificationReportRequest)
+        public async Task<Tuple<IList<EmailNotificationItemEntity>, string>> GetEmailNotifications(NotificationReportRequest notificationReportRequest)
         {
             if (notificationReportRequest == null)
             {
@@ -230,24 +269,56 @@ namespace NotificationService.Data.Repositories
             this.logger.TraceInformation($"Started {nameof(this.GetEmailNotifications)} method of {nameof(TableStorageEmailRepository)}.");
             var entities = new List<EmailNotificationItemTableEntity>();
             var notificationEntities = new List<EmailNotificationItemEntity>();
-            string filterDateExpression = GetDateFilterExpression(notificationReportRequest);
-            string filterExpression = GetFilterExpression(notificationReportRequest);
-            string finalFilter = filterDateExpression != null && filterDateExpression.Length > 0 ? filterDateExpression : filterExpression;
-            if (filterDateExpression != null && filterDateExpression.Length > 0 && filterExpression != null && filterExpression.Length > 0)
+            var filterDateExpression = this.GetDateFilterExpression(notificationReportRequest);
+            var filterExpression = this.GetFilterExpression(notificationReportRequest);
+            var finalFilter = filterDateExpression != null ? filterDateExpression : filterExpression;
+            if (filterDateExpression != null && filterExpression != null)
             {
-                finalFilter = TableQuery.CombineFilters(filterDateExpression, TableOperators.And, filterExpression);
+                // finalFilter = TableQuery.CombineFilters(filterDateExpression, TableOperators.And, filterExpression);
+                finalFilter = ExpressionUtility.And(filterDateExpression, filterExpression);
             }
 
-            var tableQuery = new TableQuery<EmailNotificationItemTableEntity>()
-                     .Where(finalFilter)
-                     .OrderByDesc(notificationReportRequest.SendOnUtcDateStart)
-                     .Take(notificationReportRequest.Take == 0 ? 100 : notificationReportRequest.Take);
-            var queryResult = this.emailHistoryTable.ExecuteQuerySegmented(tableQuery, notificationReportRequest.Token);
-            entities.AddRange(queryResult.Results);
+            // var tableQuery = new TableQuery<EmailNotificationItemTableEntity>()
+            //         .Where(finalFilter)
+            //         .OrderByDesc(notificationReportRequest.SendOnUtcDateStart)
+            //         .Take(notificationReportRequest.Take == 0 ? 100 : notificationReportRequest.Take);
+            // var queryResult = this.emailHistoryTable.ExecuteQuerySegmented(tableQuery, notificationReportRequest.Token);
+            var result = this.emailHistoryTable.QueryAsync(finalFilter, maxPerPage: notificationReportRequest.Take > 0 ? notificationReportRequest.Take : 100);
+
+            string continuationToken = string.Empty;
+            await foreach (var page in result.AsPages())
+            {
+                entities.AddRange(page.Values.Select(item => new EmailNotificationItemTableEntity
+                {
+                    Application = item.Application,
+                    BCC = item.BCC,
+                    CC = item.CC,
+                    EmailAccountUsed = item.EmailAccountUsed,
+                    From = item.From,
+                    ErrorMessage = item.ErrorMessage,
+                    NotificationId = item.NotificationId,
+                    Priority = item.Priority,
+                    SendOnUtcDate = item.SendOnUtcDate,
+                    ReplyTo = item.ReplyTo,
+                    Subject = item.Subject,
+                    Status = item.Status,
+                    To = item.To,
+                    TrackingId = item.TrackingId,
+                    Timestamp = item.Timestamp,
+                    TryCount = item.TryCount,
+                    PartitionKey = item.PartitionKey,
+                    RowKey = item.RowKey,
+                    Sensitivity = Enum.Parse<MailSensitivity>(item.Sensitivity),
+                    ETag = item.ETag,
+                }));
+
+                continuationToken = page.ContinuationToken;
+            }
+
             notificationEntities = entities.Select(e => e.ConvertToEmailNotificationItemEntity()).ToList();
-            var token = queryResult.ContinuationToken;
-            Tuple<IList<EmailNotificationItemEntity>, TableContinuationToken> tuple = new Tuple<IList<EmailNotificationItemEntity>, TableContinuationToken>(notificationEntities, token);
-            return Task.FromResult(tuple);
+            Tuple<IList<EmailNotificationItemEntity>, string> tuple = new Tuple<IList<EmailNotificationItemEntity>, string>(notificationEntities, continuationToken);
+            return tuple;
+
         }
 
         /// <inheritdoc/>
@@ -259,19 +330,28 @@ namespace NotificationService.Data.Repositories
             }
 
             this.logger.TraceInformation($"Started {nameof(this.UpdateEmailNotificationItemEntities)} method of {nameof(TableStorageEmailRepository)}.");
-            TableBatchOperation batchOperation = new TableBatchOperation();
+
+            // TableBatchOperation batchOperation = new TableBatchOperation();
+            // foreach (var item in emailNotificationItemEntities)
+            // {
+            //     batchOperation.Merge(item.ConvertToEmailNotificationItemTableEntity());
+            // }
+            // Task.WaitAll(this.emailHistoryTable.ExecuteBatchAsync(batchOperation));
+            var tableTransactionAction = new List<TableTransactionAction>();
+
             foreach (var item in emailNotificationItemEntities)
             {
-                batchOperation.Merge(item.ConvertToEmailNotificationItemTableEntity());
+                tableTransactionAction.Add(new TableTransactionAction(TableTransactionActionType.UpsertReplace, item.ConvertToEmailNotificationItemTableEntity()));
             }
 
-            Task.WaitAll(this.emailHistoryTable.ExecuteBatchAsync(batchOperation));
+            _ = this.emailHistoryTable.SubmitTransaction(tableTransactionAction);
 
             try
             {
                 List<Task> eventsDBUpdateTasks = new List<Task>();
                 foreach (var item in emailNotificationItemEntities)
                 {
+                    // Fix this
                     var updatedItem = this.eventsContainer.GetItemLinqQueryable<EmailNotificationDto>(allowSynchronousQueryExecution: true)
                         .Where(nie => item.NotificationId == nie.ExternalId)
                         .AsEnumerable()
@@ -307,7 +387,7 @@ namespace NotificationService.Data.Repositories
             string filterExpression = null;
             foreach (var item in notificationIds)
             {
-                filterExpression = filterExpression == null ? TableQuery.GenerateFilterCondition("NotificationId", QueryComparisons.Equal, item) : filterExpression + " or " + TableQuery.GenerateFilterCondition("NotificationId", QueryComparisons.Equal, item);
+                filterExpression = filterExpression == null ? $"NotificationId eq {item}" : $" or NotificationId eq {item}";
             }
 
             var traceProps = new Dictionary<string, string>();
@@ -316,8 +396,16 @@ namespace NotificationService.Data.Repositories
 
             this.logger.TraceInformation($"Started {nameof(this.GetEmailNotificationItemEntities)} method of {nameof(TableStorageEmailRepository)}.", traceProps);
             List<MeetingNotificationItemTableEntity> meetingNotificationItemEntities = new List<MeetingNotificationItemTableEntity>();
-            var linqQuery = new TableQuery<MeetingNotificationItemTableEntity>().Where(filterExpression);
-            meetingNotificationItemEntities = this.meetingHistoryTable.ExecuteQuery(linqQuery)?.Select(ent => ent).ToList();
+
+            // var linqQuery = new TableQuery<MeetingNotificationItemTableEntity>().Where(filterExpression);
+
+            // meetingNotificationItemEntities = this.meetingHistoryTable.ExecuteQuery(linqQuery)?.Select(ent => ent).ToList();
+            var meetingNotificationItemEntitiesResponse = this.meetingHistoryTable.QueryAsync<MeetingNotificationItemTableEntity>(filterExpression).ConfigureAwait(false);
+
+            await foreach (var item in meetingNotificationItemEntitiesResponse)
+            {
+                meetingNotificationItemEntities.Add(item);
+            }
 
             IList<MeetingNotificationItemEntity> notificationEntities = meetingNotificationItemEntities.Select(e => e.ConvertToMeetingNotificationItemEntity()).ToList();
             IList<MeetingNotificationItemEntity> updatedNotificationEntities = await this.mailAttachmentRepository.DownloadMeetingInvite(notificationEntities, applicationName).ConfigureAwait(false);
@@ -336,11 +424,19 @@ namespace NotificationService.Data.Repositories
             var traceProps = new Dictionary<string, string>();
             traceProps[AIConstants.NotificationIds] = notificationId;
 
-            string filterExpression = TableQuery.GenerateFilterCondition("NotificationId", QueryComparisons.Equal, notificationId);
+            // string filterExpression = TableQuery.GenerateFilterCondition("NotificationId", QueryComparisons.Equal, notificationId);
             this.logger.TraceInformation($"Started {nameof(this.GetEmailNotificationItemEntity)} method of {nameof(TableStorageEmailRepository)}.", traceProps);
             List<MeetingNotificationItemTableEntity> meetingNotificationItemEntities = new List<MeetingNotificationItemTableEntity>();
-            var linqQuery = new TableQuery<MeetingNotificationItemTableEntity>().Where(filterExpression);
-            meetingNotificationItemEntities = this.meetingHistoryTable.ExecuteQuery(linqQuery)?.Select(ent => ent).ToList();
+
+            // var linqQuery = new TableQuery<MeetingNotificationItemTableEntity>().Where(filterExpression);
+            // meetingNotificationItemEntities = this.meetingHistoryTable.ExecuteQuery(linqQuery)?.Select(ent => ent).ToList();
+            var meetingNotificationEntitiesResponse = this.meetingHistoryTable.QueryAsync<MeetingNotificationItemTableEntity>(a => a.NotificationId.Equals(notificationId, StringComparison.OrdinalIgnoreCase)).ConfigureAwait(false);
+
+            await foreach (var entity in meetingNotificationEntitiesResponse)
+            {
+                meetingNotificationItemEntities.Add(entity);
+            }
+
             List<MeetingNotificationItemEntity> notificationEntities = meetingNotificationItemEntities.Select(e => e.ConvertToMeetingNotificationItemEntity()).ToList();
             IList<MeetingNotificationItemEntity> updatedNotificationEntities = await this.mailAttachmentRepository.DownloadMeetingInvite(notificationEntities, applicationName).ConfigureAwait(false);
             this.logger.TraceInformation($"Finished {nameof(this.GetEmailNotificationItemEntity)} method of {nameof(TableStorageEmailRepository)}.", traceProps);
@@ -383,13 +479,17 @@ namespace NotificationService.Data.Repositories
 
             foreach (var batch in batchesToCreate)
             {
-                TableBatchOperation batchOperation = new TableBatchOperation();
+                // TableBatchOperation batchOperation = new TableBatchOperation();
+                var transactionActions = new List<TableTransactionAction>();
                 foreach (var item in batch)
                 {
-                    batchOperation.Insert(item.ConvertToMeetingNotificationItemTableEntity());
+                    transactionActions.Add(new TableTransactionAction(TableTransactionActionType.Add, item.ConvertToMeetingNotificationItemTableEntity()));
+
+                    // batchOperation.Insert(item.ConvertToMeetingNotificationItemTableEntity());
                 }
 
-                Task.WaitAll(this.meetingHistoryTable.ExecuteBatchAsync(batchOperation));
+                // Task.WaitAll(this.meetingHistoryTable.ExecuteBatchAsync(batchOperation));
+                _ = await this.meetingHistoryTable.SubmitTransactionAsync(transactionActions).ConfigureAwait(false);
             }
 
             this.logger.TraceInformation($"Finished {nameof(this.CreateEmailNotificationItemEntities)} method of {nameof(TableStorageEmailRepository)}.", traceProps);
@@ -405,13 +505,25 @@ namespace NotificationService.Data.Repositories
             }
 
             this.logger.TraceInformation($"Started {nameof(this.UpdateEmailNotificationItemEntities)} method of {nameof(TableStorageEmailRepository)}.");
-            TableBatchOperation batchOperation = new TableBatchOperation();
+
+            // TableBatchOperation batchOperation = new TableBatchOperation();
+            // foreach (var item in meetingNotificationItemEntities)
+            // {
+            //    batchOperation.Merge(item.ConvertToMeetingNotificationItemTableEntity());
+            // }
+            // Task.WaitAll(this.meetingHistoryTable.ExecuteBatchAsync(batchOperation));
+
+            // TableBatchOperation batchOperation = new TableBatchOperation();
+            var transactionActions = new List<TableTransactionAction>();
             foreach (var item in meetingNotificationItemEntities)
             {
-                batchOperation.Merge(item.ConvertToMeetingNotificationItemTableEntity());
+                transactionActions.Add(new TableTransactionAction(TableTransactionActionType.Add, item.ConvertToMeetingNotificationItemTableEntity()));
+
+                // batchOperation.Insert(item.ConvertToMeetingNotificationItemTableEntity());
             }
 
-            Task.WaitAll(this.meetingHistoryTable.ExecuteBatchAsync(batchOperation));
+            // Task.WaitAll(this.meetingHistoryTable.ExecuteBatchAsync(batchOperation));
+            _ = this.meetingHistoryTable.SubmitTransaction(transactionActions);
 
             try
             {
@@ -443,7 +555,7 @@ namespace NotificationService.Data.Repositories
         }
 
         /// <inheritdoc/>
-        public Task<Tuple<IList<MeetingNotificationItemEntity>, TableContinuationToken>> GetMeetingInviteNotifications(NotificationReportRequest meetingInviteReportRequest)
+        public async Task<Tuple<IList<MeetingNotificationItemEntity>, string>> GetMeetingInviteNotifications(NotificationReportRequest meetingInviteReportRequest)
         {
             if (meetingInviteReportRequest == null)
             {
@@ -453,24 +565,43 @@ namespace NotificationService.Data.Repositories
             this.logger.TraceInformation($"Started {nameof(this.GetMeetingInviteNotifications)} method of {nameof(TableStorageEmailRepository)}.");
             var entities = new List<MeetingNotificationItemTableEntity>();
             var notificationEntities = new List<MeetingNotificationItemEntity>();
-            string filterDateExpression = GetDateFilterExpression(meetingInviteReportRequest);
-            string filterExpression = GetFilterExpression(meetingInviteReportRequest);
-            string finalFilter = filterDateExpression != null && filterDateExpression.Length > 0 ? filterDateExpression : filterExpression;
-            if (filterDateExpression != null && filterDateExpression.Length > 0 && filterExpression != null && filterExpression.Length > 0)
+            var filterDateExpression = this.GetDateFilterExpression(meetingInviteReportRequest);
+            var filterExpression = this.GetFilterExpression(meetingInviteReportRequest);
+            var finalFilter = filterDateExpression != null ? filterDateExpression : filterExpression;
+            if (filterDateExpression != null && filterExpression != null)
             {
-                finalFilter = TableQuery.CombineFilters(filterDateExpression, TableOperators.And, filterExpression);
+                // finalFilter = TableQuery.CombineFilters(filterDateExpression, TableOperators.And, filterExpression);
+                finalFilter = ExpressionUtility.And(filterDateExpression, filterExpression);
             }
 
-            var tableQuery = new TableQuery<MeetingNotificationItemTableEntity>()
-                     .Where(finalFilter)
-                     .OrderByDesc(meetingInviteReportRequest.SendOnUtcDateStart)
-                     .Take(meetingInviteReportRequest.Take == 0 ? 100 : meetingInviteReportRequest.Take);
-            var queryResult = this.meetingHistoryTable.ExecuteQuerySegmented(tableQuery, meetingInviteReportRequest.Token);
-            entities.AddRange(queryResult.Results);
+            // var tableQuery = new TableQuery<MeetingNotificationItemTableEntity>()
+            //         .Where(finalFilter)
+            //         .OrderByDesc(meetingInviteReportRequest.SendOnUtcDateStart)
+            //         .Take(meetingInviteReportRequest.Take == 0 ? 100 : meetingInviteReportRequest.Take);
+            // var queryResult = this.meetingHistoryTable.ExecuteQuerySegmented(tableQuery, meetingInviteReportRequest.Token);
+            var result = this.meetingHistoryTable.QueryAsync(finalFilter, maxPerPage: meetingInviteReportRequest.Take > 0 ? meetingInviteReportRequest.Take : 100);
+
+            string token = string.Empty;
+            await foreach (var page in result.AsPages(meetingInviteReportRequest.Token))
+            {
+                entities.AddRange(page.Values.Select(a => new MeetingNotificationItemTableEntity
+                {
+                    Application = a.Application,
+                    NotificationId = a.NotificationId,
+                    TrackingId = a.TrackingId,
+                    From = a.From,
+                    Timestamp = a.Timestamp,
+                    SendOnUtcDate = a.SendOnUtcDate,
+                    Subject = a.Subject,
+                    Status = a.Status,
+                }));
+
+                token = page.ContinuationToken;
+            }
+
             notificationEntities = entities.Select(e => e.ConvertToMeetingNotificationItemEntity()).ToList();
-            var token = queryResult.ContinuationToken;
-            Tuple<IList<MeetingNotificationItemEntity>, TableContinuationToken> tuple = new Tuple<IList<MeetingNotificationItemEntity>, TableContinuationToken>(notificationEntities, token);
-            return Task.FromResult(tuple);
+            Tuple<IList<MeetingNotificationItemEntity>, string> tuple = new Tuple<IList<MeetingNotificationItemEntity>, string>(notificationEntities, token);
+            return tuple;
         }
 
         /// <inheritdoc/>
@@ -481,27 +612,31 @@ namespace NotificationService.Data.Repositories
                 throw new ArgumentNullException(nameof(dateRange));
             }
 
-            string filterExpression = TableQuery.GenerateFilterConditionForDate("SendOnUtcDate", QueryComparisons.GreaterThanOrEqual, dateRange.StartDate)
-                    + " and "
-                    + TableQuery.GenerateFilterConditionForDate("SendOnUtcDate", QueryComparisons.LessThan, dateRange.EndDate);
+            // string filterExpression = $"SendOnUtcDate ge datetime'{dateRange.StartDate}' and SendOnUtcDate le datetime'{dateRange.EndDate}'";
+            Expression<Func<EmailNotificationItemEntity, bool>> predicate = a => a.SendOnUtcDate >= dateRange.StartDate && a.SendOnUtcDate < dateRange.EndDate;
 
             if (!string.IsNullOrEmpty(applicationName))
             {
-                filterExpression = filterExpression
-                    + " and "
-                    + TableQuery.GenerateFilterCondition("Application", QueryComparisons.Equal, applicationName);
+                Expression<Func<EmailNotificationItemEntity, bool>> applicationNamePredicate = a => a.Application.Equals(applicationName, StringComparison.InvariantCultureIgnoreCase);
+
+                // filterExpression += " and Application eq {applicationName}";
+                predicate = ExpressionUtility.And(predicate, applicationNamePredicate);
             }
 
             if (statusList != null && statusList.Count > 0)
             {
-                string statusFilterExpression = null;
+                Expression<Func<EmailNotificationItemEntity, bool>> statusFilterExpression = null;
                 foreach (var status in statusList)
                 {
-                    string filter = TableQuery.GenerateFilterCondition("Status", QueryComparisons.Equal, status.ToString());
-                    statusFilterExpression = statusFilterExpression == null ? filter : " or " + filter;
+                    // string filter = $"Status eq {status}";
+                    Expression<Func<EmailNotificationItemEntity, bool>> statusPredicate = a => a.Status == status;
+
+                    // statusFilterExpression = statusFilterExpression == null ? filter : " or " + filter;
+                    statusFilterExpression = statusFilterExpression == null ? statusPredicate : ExpressionUtility.Or(statusFilterExpression, statusPredicate);
                 }
 
-                filterExpression = TableQuery.CombineFilters(filterExpression, TableOperators.And, statusFilterExpression);
+                // filterExpression = TableQuery.CombineFilters(filterExpression, TableOperators.And, statusFilterExpression);
+                predicate = ExpressionUtility.And(predicate, statusFilterExpression);
             }
 
             var traceProps = new Dictionary<string, string>();
@@ -510,8 +645,39 @@ namespace NotificationService.Data.Repositories
 
             this.logger.TraceInformation($"Started {nameof(this.GetPendingOrFailedEmailNotificationsByDateRange)} method of {nameof(TableStorageEmailRepository)}.", traceProps);
             List<EmailNotificationItemTableEntity> emailNotificationItemEntities = new List<EmailNotificationItemTableEntity>();
-            var linqQuery = new TableQuery<EmailNotificationItemTableEntity>().Where(filterExpression);
-            emailNotificationItemEntities = this.emailHistoryTable.ExecuteQuery(linqQuery)?.Select(ent => ent).ToList();
+
+            // var linqQuery = new TableQuery<EmailNotificationItemTableEntity>().Where(filterExpression);
+            // emailNotificationItemEntities = this.emailHistoryTable.ExecuteQuery(linqQuery)?.Select(ent => ent).ToList();
+            var result = this.emailHistoryTable.QueryAsync(predicate);
+
+            await foreach (var item in result)
+            {
+                emailNotificationItemEntities.Add(new EmailNotificationItemTableEntity
+                {
+                    Application = item.Application,
+                    BCC = item.BCC,
+                    CC = item.CC,
+                    EmailAccountUsed = item.EmailAccountUsed,
+                    From = item.From,
+                    ErrorMessage = item.ErrorMessage,
+                    NotificationId = item.NotificationId,
+                    Priority = item.Priority.ToString(),
+                    SendOnUtcDate = item.SendOnUtcDate,
+                    ReplyTo = item.ReplyTo,
+                    Subject = item.Subject,
+                    Status = item.Status.ToString(),
+                    To = item.To,
+                    TrackingId = item.TrackingId,
+                    Timestamp = item.Timestamp,
+                    TryCount = item.TryCount,
+                    PartitionKey = item.PartitionKey,
+                    RowKey = item.RowKey,
+                    Sensitivity = item.Sensitivity,
+                    ETag = item.ETag,
+                    TemplateId = item.TemplateId,
+                });
+            }
+
             if (emailNotificationItemEntities == null || emailNotificationItemEntities.Count == 0)
             {
                 return null;
@@ -536,27 +702,49 @@ namespace NotificationService.Data.Repositories
                 throw new ArgumentNullException(nameof(dateRange));
             }
 
-            string filterExpression = TableQuery.GenerateFilterConditionForDate("SendOnUtcDate", QueryComparisons.GreaterThanOrEqual, dateRange.StartDate)
-                    + " and "
-                    + TableQuery.GenerateFilterConditionForDate("SendOnUtcDate", QueryComparisons.LessThan, dateRange.EndDate);
+            // string filterExpression = TableQuery.GenerateFilterConditionForDate("SendOnUtcDate", QueryComparisons.GreaterThanOrEqual, dateRange.StartDate)
+            //         + " and "
+            //         + TableQuery.GenerateFilterConditionForDate("SendOnUtcDate", QueryComparisons.LessThan, dateRange.EndDate);
+            // if (!string.IsNullOrEmpty(applicationName))
+            // {
+            //    filterExpression = filterExpression
+            //        + " and "
+            //        + TableQuery.GenerateFilterCondition("Application", QueryComparisons.Equal, applicationName);
+            // }
+            // if (statusList != null && statusList.Count > 0)
+            // {
+            //    string statusFilterExpression = null;
+            //    foreach (var status in statusList)
+            //    {
+            //        string filter = TableQuery.GenerateFilterCondition("Status", QueryComparisons.Equal, status.ToString());
+            //        statusFilterExpression = statusFilterExpression == null ? filter : " or " + filter;
+            //    }
+            //    filterExpression = TableQuery.CombineFilters(filterExpression, TableOperators.And, statusFilterExpression);
+            // }
+            Expression<Func<EmailNotificationItemEntity, bool>> predicate = a => a.SendOnUtcDate >= dateRange.StartDate && a.SendOnUtcDate < dateRange.EndDate;
 
             if (!string.IsNullOrEmpty(applicationName))
             {
-                filterExpression = filterExpression
-                    + " and "
-                    + TableQuery.GenerateFilterCondition("Application", QueryComparisons.Equal, applicationName);
+                Expression<Func<EmailNotificationItemEntity, bool>> applicationNamePredicate = a => a.Application.Equals(applicationName, StringComparison.InvariantCultureIgnoreCase);
+
+                // filterExpression += " and Application eq {applicationName}";
+                predicate = ExpressionUtility.And(predicate, applicationNamePredicate);
             }
 
             if (statusList != null && statusList.Count > 0)
             {
-                string statusFilterExpression = null;
+                Expression<Func<EmailNotificationItemEntity, bool>> statusFilterExpression = null;
                 foreach (var status in statusList)
                 {
-                    string filter = TableQuery.GenerateFilterCondition("Status", QueryComparisons.Equal, status.ToString());
-                    statusFilterExpression = statusFilterExpression == null ? filter : " or " + filter;
+                    // string filter = $"Status eq {status}";
+                    Expression<Func<EmailNotificationItemEntity, bool>> statusPredicate = a => a.Status == status;
+
+                    // statusFilterExpression = statusFilterExpression == null ? filter : " or " + filter;
+                    statusFilterExpression = statusFilterExpression == null ? statusPredicate : ExpressionUtility.Or(statusFilterExpression, statusPredicate);
                 }
 
-                filterExpression = TableQuery.CombineFilters(filterExpression, TableOperators.And, statusFilterExpression);
+                // filterExpression = TableQuery.CombineFilters(filterExpression, TableOperators.And, statusFilterExpression);
+                predicate = ExpressionUtility.And(predicate, statusFilterExpression);
             }
 
             var traceProps = new Dictionary<string, string>();
@@ -565,8 +753,32 @@ namespace NotificationService.Data.Repositories
 
             this.logger.TraceInformation($"Started {nameof(this.GetPendingOrFailedMeetingNotificationsByDateRange)} method of {nameof(TableStorageEmailRepository)}.", traceProps);
             List<MeetingNotificationItemTableEntity> meetingNotificationItemEntities = new List<MeetingNotificationItemTableEntity>();
-            var linqQuery = new TableQuery<MeetingNotificationItemTableEntity>().Where(filterExpression);
-            meetingNotificationItemEntities = this.meetingHistoryTable.ExecuteQuery(linqQuery)?.Select(ent => ent).ToList();
+
+            // var linqQuery = new TableQuery<MeetingNotificationItemTableEntity>().Where(filterExpression);
+            // meetingNotificationItemEntities = this.meetingHistoryTable.ExecuteQuery(linqQuery)?.Select(ent => ent).ToList();
+            var result = this.meetingHistoryTable.QueryAsync(predicate);
+
+            await foreach (var item in result)
+            {
+                meetingNotificationItemEntities.Add(new MeetingNotificationItemTableEntity
+                {
+                    Application = item.Application,
+                    NotificationId = item.NotificationId,
+                    TrackingId = item.TrackingId,
+                    From = item.From,
+                    Timestamp = item.Timestamp,
+                    SendOnUtcDate = item.SendOnUtcDate,
+                    Subject = item.Subject,
+                    Status = item.Status.ToString(),
+                    EmailAccountUsed = item.EmailAccountUsed,
+                    ErrorMessage = item.ErrorMessage,
+                    TryCount = item.TryCount,
+                    PartitionKey = item.PartitionKey,
+                    RowKey = item.RowKey,
+                    ETag = item.ETag,
+                });
+            }
+
             if (meetingNotificationItemEntities == null || meetingNotificationItemEntities.Count == 0)
             {
                 return null;
@@ -616,10 +828,12 @@ namespace NotificationService.Data.Repositories
             return statusStr;
         }
 
-        private static string GetFilterExpression(NotificationReportRequest notificationReportRequest)
+#pragma warning disable CA1822 // Mark members as static
+        private Expression<Func<NotificationReportResponse, bool>> GetFilterExpression(NotificationReportRequest notificationReportRequest)
+#pragma warning restore CA1822 // Mark members as static
         {
-            var filterSet = new HashSet<string>();
-            string filterExpression = null;
+            var filterSet = new HashSet<Expression<Func<NotificationReportResponse, bool>>>();
+            Expression<Func<NotificationReportResponse, bool>> filterExpression = null;
             string applicationFilter = null;
             string accountFilter = null;
             string notificationFilter = null;
@@ -628,99 +842,218 @@ namespace NotificationService.Data.Repositories
 
             if (notificationReportRequest.ApplicationFilter?.Count > 0)
             {
+                Expression<Func<NotificationReportResponse, bool>> expression = null;
                 foreach (var item in notificationReportRequest.ApplicationFilter)
                 {
-                    applicationFilter = applicationFilter == null ? TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, item) : applicationFilter + " or " + TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, item);
+                    // applicationFilter = applicationFilter == null ? TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, item) : applicationFilter + " or " + TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, item);
+                    Expression<Func<NotificationReportResponse, bool>> partitionExpression = a => a.PartitionKey == item;
+                    if (expression == null)
+                    {
+                        expression = partitionExpression;
+                    }
+                    else
+                    {
+                        expression = ExpressionUtility.Or(expression, partitionExpression);
+                    }
                 }
 
-                _ = filterSet.Add("(" + applicationFilter + ")");
+                _ = filterSet.Add(expression);
             }
 
             if (notificationReportRequest.AccountsUsedFilter?.Count > 0)
             {
+                Expression<Func<NotificationReportResponse, bool>> expression = null;
                 foreach (var item in notificationReportRequest.AccountsUsedFilter)
                 {
-                    accountFilter = accountFilter == null ? TableQuery.GenerateFilterCondition("EmailAccountUsed", QueryComparisons.Equal, item) : accountFilter + " or " + TableQuery.GenerateFilterCondition("EmailAccountUsed", QueryComparisons.Equal, item);
+                    // accountFilter = accountFilter == null ? TableQuery.GenerateFilterCondition("EmailAccountUsed", QueryComparisons.Equal, item) : accountFilter + " or " + TableQuery.GenerateFilterCondition("EmailAccountUsed", QueryComparisons.Equal, item);
+                    Expression<Func<NotificationReportResponse, bool>> emailAccountUsedExpression = a => a.EmailAccountUsed == item;
+
+                    if (expression == null)
+                    {
+                        expression = emailAccountUsedExpression;
+                    }
+                    else
+                    {
+                        expression = ExpressionUtility.Or(expression, emailAccountUsedExpression);
+                    }
                 }
 
-                _ = filterSet.Add("(" + accountFilter + ")");
+                _ = filterSet.Add(expression);
             }
 
             if (notificationReportRequest.NotificationIdsFilter?.Count > 0)
             {
+                Expression<Func<NotificationReportResponse, bool>> expression = null;
+
                 foreach (var item in notificationReportRequest.NotificationIdsFilter)
                 {
-                    notificationFilter = notificationFilter == null ? TableQuery.GenerateFilterCondition("NotificationId", QueryComparisons.Equal, item) : notificationFilter + " or " + TableQuery.GenerateFilterCondition("NotificationId", QueryComparisons.Equal, item);
+                    // notificationFilter = notificationFilter == null ? TableQuery.GenerateFilterCondition("NotificationId", QueryComparisons.Equal, item) : notificationFilter + " or " + TableQuery.GenerateFilterCondition("NotificationId", QueryComparisons.Equal, item);
+                    Expression<Func<NotificationReportResponse, bool>> emailAccountUsedExpression = a => a.NotificationId == item;
+
+                    if (expression == null)
+                    {
+                        expression = emailAccountUsedExpression;
+                    }
+                    else
+                    {
+                        expression = ExpressionUtility.Or(expression, emailAccountUsedExpression);
+                    }
                 }
 
-                _ = filterSet.Add("(" + notificationFilter + ")");
+                _ = filterSet.Add(expression);
             }
 
             if (notificationReportRequest.TrackingIdsFilter?.Count > 0)
             {
+                Expression<Func<NotificationReportResponse, bool>> expression = null;
+
                 foreach (var item in notificationReportRequest.TrackingIdsFilter)
                 {
-                    trackingIdFilter = trackingIdFilter == null ? TableQuery.GenerateFilterCondition("TrackingId", QueryComparisons.Equal, item) : trackingIdFilter + " or " + TableQuery.GenerateFilterCondition("TrackingId", QueryComparisons.Equal, item);
+                    // trackingIdFilter = trackingIdFilter == null ? TableQuery.GenerateFilterCondition("TrackingId", QueryComparisons.Equal, item) : trackingIdFilter + " or " + TableQuery.GenerateFilterCondition("TrackingId", QueryComparisons.Equal, item);
+                    Expression<Func<NotificationReportResponse, bool>> emailAccountUsedExpression = a => a.TrackingId == item;
+
+                    if (expression == null)
+                    {
+                        expression = emailAccountUsedExpression;
+                    }
+                    else
+                    {
+                        expression = ExpressionUtility.Or(expression, emailAccountUsedExpression);
+                    }
                 }
 
-                _ = filterSet.Add("(" + trackingIdFilter + ")");
+                _ = filterSet.Add(expression);
             }
 
             if (notificationReportRequest.NotificationStatusFilter?.Count > 0)
             {
+                Expression<Func<NotificationReportResponse, bool>> expression = null;
+
                 foreach (int item in notificationReportRequest.NotificationStatusFilter)
                 {
                     string status = GetStatus(item);
-                    statusFilter = statusFilter == null ? TableQuery.GenerateFilterCondition("Status", QueryComparisons.Equal, status) : statusFilter + " or " + TableQuery.GenerateFilterCondition("Status", QueryComparisons.Equal, status);
+                    // statusFilter = statusFilter == null ? TableQuery.GenerateFilterCondition("Status", QueryComparisons.Equal, status) : statusFilter + " or " + TableQuery.GenerateFilterCondition("Status", QueryComparisons.Equal, status);
+                    Expression<Func<NotificationReportResponse, bool>> statusExpression = a => a.Status == status;
+
+                    if (expression == null)
+                    {
+                        expression = statusExpression;
+                    }
+                    else
+                    {
+                        expression = ExpressionUtility.Or(expression, statusExpression);
+                    }
                 }
 
-                _ = filterSet.Add("(" + statusFilter + ")");
+                _ = filterSet.Add(expression);
             }
 
             filterExpression = PrepareFilterExp(filterSet);
             return filterExpression;
 
-            static string PrepareFilterExp(HashSet<string> filterSet)
+            static Expression<Func<NotificationReportResponse, bool>> PrepareFilterExp(HashSet<Expression<Func<NotificationReportResponse, bool>>> filterSet)
             {
-                string filterExp = string.Join(" and ", filterSet.ToArray());
+                Expression<Func<NotificationReportResponse, bool>> filterExp = null;
+                foreach (var filter in filterSet)
+                {
+                    filterExp = ExpressionUtility.And(filterExp, filter);
+                }
+
                 return filterExp;
             }
         }
 
-        private static string GetDateFilterExpression(NotificationReportRequest notificationReportRequest)
+#pragma warning disable CA1822 // Mark members as static
+        private Expression<Func<NotificationReportResponse, bool>> GetDateFilterExpression(NotificationReportRequest notificationReportRequest)
+#pragma warning restore CA1822 // Mark members as static
         {
-            string filterExpression = null;
+            Expression<Func<NotificationReportResponse, bool>> expression = null;
             if (DateTime.TryParse(notificationReportRequest.CreatedDateTimeStart, out DateTime createdDateTimeStart))
             {
-                filterExpression = filterExpression == null ? TableQuery.GenerateFilterConditionForDate("CreatedDateTimeStart", QueryComparisons.GreaterThanOrEqual, createdDateTimeStart) : filterExpression + TableQuery.GenerateFilterConditionForDate("CreatedDateTimeStart", QueryComparisons.GreaterThanOrEqual, createdDateTimeStart);
+                // filterExpression = filterExpression == null ? TableQuery.GenerateFilterConditionForDate("CreatedDateTimeStart", QueryComparisons.GreaterThanOrEqual, createdDateTimeStart) : filterExpression + TableQuery.GenerateFilterConditionForDate("CreatedDateTimeStart", QueryComparisons.GreaterThanOrEqual, createdDateTimeStart);
+                Expression<Func<NotificationReportResponse, bool>> dateExpression = a => DateTime.Compare(a.CreatedDateTime, createdDateTimeStart) >= 0;
+
+                if (expression == null)
+                {
+                    expression = dateExpression;
+                }
+                else
+                {
+                    expression = ExpressionUtility.And(expression, dateExpression);
+                }
             }
 
             if (DateTime.TryParse(notificationReportRequest.CreatedDateTimeEnd, out DateTime createdDateTimeEnd))
             {
-                filterExpression = filterExpression == null ? TableQuery.GenerateFilterConditionForDate("CreatedDateTimeEnd", QueryComparisons.LessThanOrEqual, createdDateTimeEnd) : filterExpression + TableQuery.GenerateFilterConditionForDate("CreatedDateTimeEnd", QueryComparisons.LessThanOrEqual, createdDateTimeEnd);
+                // filterExpression = filterExpression == null ? TableQuery.GenerateFilterConditionForDate("CreatedDateTimeEnd", QueryComparisons.LessThanOrEqual, createdDateTimeEnd) : filterExpression + TableQuery.GenerateFilterConditionForDate("CreatedDateTimeEnd", QueryComparisons.LessThanOrEqual, createdDateTimeEnd);
+                Expression<Func<NotificationReportResponse, bool>> dateExpression = a => DateTime.Compare(a.CreatedDateTime, createdDateTimeEnd) <= 0;
+                if (expression == null)
+                {
+                    expression = dateExpression;
+                }
+                else
+                {
+                    expression = ExpressionUtility.And(expression, dateExpression);
+                }
             }
 
             if (DateTime.TryParse(notificationReportRequest.SendOnUtcDateStart, out DateTime sentTimeStart))
             {
-                filterExpression = filterExpression == null ? TableQuery.GenerateFilterConditionForDate("SendOnUtcDate", QueryComparisons.GreaterThanOrEqual, sentTimeStart) : filterExpression + " and " + TableQuery.GenerateFilterConditionForDate("SendOnUtcDate", QueryComparisons.GreaterThanOrEqual, sentTimeStart);
+                // filterExpression = filterExpression == null ? TableQuery.GenerateFilterConditionForDate("SendOnUtcDate", QueryComparisons.GreaterThanOrEqual, sentTimeStart) : filterExpression + " and " + TableQuery.GenerateFilterConditionForDate("SendOnUtcDate", QueryComparisons.GreaterThanOrEqual, sentTimeStart
+                Expression<Func<NotificationReportResponse, bool>> dateExpression = a => DateTime.Compare(a.SendOnUtcDate, sentTimeStart) >= 0;
+                if (expression == null)
+                {
+                    expression = dateExpression;
+                }
+                else
+                {
+                    expression = ExpressionUtility.And(expression, dateExpression);
+                }
             }
 
             if (DateTime.TryParse(notificationReportRequest.SendOnUtcDateEnd, out DateTime sentTimeEnd))
             {
-                filterExpression = filterExpression == null ? TableQuery.GenerateFilterConditionForDate("SendOnUtcDate", QueryComparisons.LessThanOrEqual, sentTimeEnd) : filterExpression + " and " + TableQuery.GenerateFilterConditionForDate("SendOnUtcDate", QueryComparisons.LessThanOrEqual, sentTimeEnd);
+                // filterExpression = filterExpression == null ? TableQuery.GenerateFilterConditionForDate("SendOnUtcDate", QueryComparisons.LessThanOrEqual, sentTimeEnd) : filterExpression + " and " + TableQuery.GenerateFilterConditionForDate("SendOnUtcDate", QueryComparisons.LessThanOrEqual, sentTimeEnd);
+                Expression<Func<NotificationReportResponse, bool>> dateExpression = a => DateTime.Compare(a.SendOnUtcDate, sentTimeEnd) <= 0;
+                if (expression == null)
+                {
+                    expression = dateExpression;
+                }
+                else
+                {
+                    expression = ExpressionUtility.And(expression, dateExpression);
+                }
             }
 
             if (DateTime.TryParse(notificationReportRequest.UpdatedDateTimeStart, out DateTime updatedTimeStart))
             {
-                filterExpression = filterExpression == null ? TableQuery.GenerateFilterConditionForDate("UpdatedDateTimeStart", QueryComparisons.GreaterThanOrEqual, updatedTimeStart) : filterExpression + TableQuery.GenerateFilterConditionForDate("UpdatedDateTimeStart", QueryComparisons.GreaterThanOrEqual, updatedTimeStart);
+                // filterExpression = filterExpression == null ? TableQuery.GenerateFilterConditionForDate("UpdatedDateTimeStart", QueryComparisons.GreaterThanOrEqual, updatedTimeStart) : filterExpression + TableQuery.GenerateFilterConditionForDate("UpdatedDateTimeStart", QueryComparisons.GreaterThanOrEqual, updatedTimeStart); ;
+                Expression<Func<NotificationReportResponse, bool>> dateExpression = a => DateTime.Compare(a.UpdatedDateTime, updatedTimeStart) < 0;
+                if (expression == null)
+                {
+                    expression = dateExpression;
+                }
+                else
+                {
+                    expression = ExpressionUtility.And(expression, dateExpression);
+                }
             }
 
             if (DateTime.TryParse(notificationReportRequest.UpdatedDateTimeEnd, out DateTime updatedTimeEnd))
             {
-                filterExpression = filterExpression == null ? TableQuery.GenerateFilterConditionForDate("UpdatedDateTimeEnd", QueryComparisons.LessThanOrEqual, updatedTimeEnd) : filterExpression + TableQuery.GenerateFilterConditionForDate("UpdatedDateTimeEnd", QueryComparisons.LessThanOrEqual, updatedTimeEnd);
+                // filterExpression = filterExpression == null ? TableQuery.GenerateFilterConditionForDate("UpdatedDateTimeEnd", QueryComparisons.LessThanOrEqual, updatedTimeEnd) : filterExpression + TableQuery.GenerateFilterConditionForDate("UpdatedDateTimeEnd", QueryComparisons.LessThanOrEqual, updatedTimeEnd);
+                Expression<Func<NotificationReportResponse, bool>> dateExpression = a => DateTime.Compare(a.UpdatedDateTime, updatedTimeEnd) > 0;
+                if (expression == null)
+                {
+                    expression = dateExpression;
+                }
+                else
+                {
+                    expression = ExpressionUtility.And(expression, dateExpression);
+                }
             }
 
-            return filterExpression;
+            return expression;
         }
 
         /// <summary>

@@ -5,12 +5,14 @@ namespace NotificationService.Contracts
 {
     using System;
     using System.Runtime.Serialization;
+    using Azure;
+    using Azure.Data.Tables;
 
     /// <summary>
     /// Notification Report Response.
     /// </summary>
     [DataContract]
-    public class NotificationReportResponse
+    public class NotificationReportResponse : ITableEntity
     {
         /// <summary>
         /// Gets or sets Notification Id.
@@ -125,5 +127,25 @@ namespace NotificationService.Contracts
         /// </summary>
         [DataMember(Name = "Subject")]
         public string Subject { get; set; }
+
+        /// <summary>
+        /// Gets or sets Partition key.
+        /// </summary>
+        public string PartitionKey { get; set; }
+
+        /// <summary>
+        /// Gets or sets Row Key.
+        /// </summary>
+        public string RowKey { get; set; }
+
+        /// <summary>
+        /// Gets or sets Timestamp.
+        /// </summary>
+        public DateTimeOffset? Timestamp { get; set; }
+
+        /// <summary>
+        /// Gets or sets ETag.
+        /// </summary>
+        public ETag ETag { get; set; }
     }
 }

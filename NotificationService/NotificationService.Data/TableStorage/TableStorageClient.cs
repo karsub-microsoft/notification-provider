@@ -3,9 +3,11 @@
 
 namespace NotificationService.Data
 {
-    using Microsoft.Azure.Cosmos.Table;
+    using Azure.Data.Tables;
+    using Azure.Identity;
     using Microsoft.Extensions.Options;
     using NotificationService.Common;
+    using System;
 
     /// <summary>
     /// Client Interface to the Azure Cloud Storage.
@@ -18,14 +20,9 @@ namespace NotificationService.Data
         private readonly StorageAccountSetting storageAccountSetting;
 
         /// <summary>
-        /// Instance of <see cref="CloudStorageAccount"/>.
-        /// </summary>
-        private readonly CloudStorageAccount cloudStorageAccount;
-
-        /// <summary>
         /// Instance of <see cref="CloudTableClient"/>.
         /// </summary>
-        private readonly CloudTableClient cloudTableClient;
+        private readonly TableServiceClient cloudTableServiceClient;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TableStorageClient"/> class.
@@ -34,15 +31,19 @@ namespace NotificationService.Data
         public TableStorageClient(IOptions<StorageAccountSetting> storageAccountSetting)
         {
             this.storageAccountSetting = storageAccountSetting?.Value;
-            this.cloudStorageAccount = CloudStorageAccount.Parse(this.storageAccountSetting.ConnectionString);
-            this.cloudTableClient = this.cloudStorageAccount.CreateCloudTableClient();
+            this.cloudTableServiceClient = new TableServiceClient(new Uri(this.storageAccountSetting.TableConnectionName), new DefaultAzureCredential());
         }
 
-        /// <inheritdoc/>
-        public CloudTable GetCloudTable(string tableName)
+        /// <summary>
+        /// Table client for the specific table.
+        /// </summary>
+        /// <param name="tableName">Table name</param>
+        /// <returns>Table Client Instance</returns>
+        public TableClient GetCloudTable(string tableName)
         {
-            CloudTable cloudTable = this.cloudTableClient.GetTableReference(tableName);
-            _ = cloudTable.CreateIfNotExists();
+            TableClient cloudTable = this.cloudTableServiceClient.GetTableClient(tableName);
+
+            // _ = cloudTable.CreateIfNotExists();
             return cloudTable;
         }
 
